@@ -1,0 +1,23 @@
+# Real document library — never commit real files.
+# (The demo lives in assets/ and is intentionally NOT ignored.)
+/library/
+/objects/
+/derived/
+/incoming/
+/data/
+/real/
+
+# Databases / indexes
+*.db
+*.sqlite
+*.sqlite3
+
+# OS / editor cruft
+.DS_Store
+*.swp
+
+node_modules/
+.env
+
+# Local working files: screenshots, one-off scripts. Never committed.
+/.scratch/

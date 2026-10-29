@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Zayla</title>
+  <!-- The monogram of icon.svg on a rounded tile, for a browser tab. -->
+  <rect width="512" height="512" rx="96" fill="#2D4A7C"/>
+  <path transform="translate(102.9 409.7) scale(.2165 -.2165)" fill="#F7F1E3" d="M1397 479 1349 0H17V61L934 1327H623Q528 1327 486 1321.5Q444 1316 407 1299Q364 1283 312 1214.5Q260 1146 173 986H92L136 1419H1370V1358L453 92H810Q978 92 1038.5 105.5Q1099 119 1127 154Q1184 223 1232.5 305.5Q1281 388 1322 479Z"/>
+</svg>

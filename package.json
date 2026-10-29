@@ -1,0 +1,30 @@
+{
+  "name": "zayla",
+  "module": "index.ts",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.4",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "bin": {
+    "zayla": "./src/cli.ts"
+  },
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "bun --hot src/cli.ts serve",
+    "cli": "bun src/cli.ts",
+    "test": "bun test",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write --error-on-warnings .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.frontend.json"
+  },
+  "type": "module",
+  "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
+    "yaml": "^2.9.1"
+  }
+}

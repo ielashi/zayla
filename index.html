@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The browser's own colours, and the bar around the page, follow the
+     system's scheme before the stylesheet has run, so a dark one never
+     flashes white. Each theme colour is that scheme's --ground. -->
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F4F6F9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121419">
+<title>Zayla</title>
+<link rel="manifest" href="./public/manifest.webmanifest">
+<link rel="icon" href="./public/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./public/apple-touch-icon.png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground: #F4F6F9; --paper: #FFFFFF;
+    --ink: #1B1E26; --ink-soft: #626B7C; --ink-faint: #697181;
+    --line: #E4E8EE; --line-soft: #EEF1F5;
+    --accent: #2D4A7C; --accent-soft: #EAF0F8; --accent-hover: #26406B;
+    /* Text set on a fill: on the accent or the danger colour, and on ink. */
+    --on-accent: #FFFFFF; --on-ink: #FFFFFF;
+    --danger: #8A2E1C; --danger-icon: #B4472F;
+    /* A question the owner may leave alone, like "Possible duplicate". */
+    --notice: #8A5A1C; --notice-soft: #FBF1E2;
+    /* Where a Document's picture is, or will be. */
+    --placeholder: #EDEFF3; --placeholder-stripe: #E7EAF0;
+    /* What a Document's pages lie on in the viewer, a shade below the page. */
+    --canvas: #E6E9EF;
+    /* Laid over a card's picture while its Document is being read, waits to
+       be, or could not be. */
+    --working: rgba(237,239,243,.72); --working-wait: rgba(237,239,243,.80); --working-err: rgba(237,239,243,.86);
+    /* What floats over the page: the header's glass, the dimming behind a
+       dialog or the Document panel, and the drop target. */
+    --glass: rgba(244,246,249,.82);
+    --scrim: rgba(20,24,33,.42);
+    --drop-tint: rgba(45,74,124,.14); --drop-card: rgba(255,255,255,.92);
+    /* The chevron a select draws, in --ink-soft. */
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23626B7C' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --radius: 12px;
+    /* The phone's bottom tab bar, which the content and toasts stay clear of. */
+    --tabs-h: 58px;
+    --shadow: 0 1px 2px rgba(27,30,38,.04), 0 6px 20px rgba(27,30,38,.06);
+    --shadow-lift: 0 2px 4px rgba(27,30,38,.06), 0 16px 40px rgba(27,30,38,.12);
+    --shadow-panel: -20px 0 60px rgba(20,24,33,.2);
+    /* The edge drawn just outside a page's image in the viewer, so a white
+       page has one against a dark canvas; in light, its shadow is enough. */
+    --page-edge: transparent;
+  }
+  /* The same tokens for a system set to dark: Zayla follows it, with no switch
+     of its own. Every colour above is restated here; what isn't a colour is
+     shared. A Document's pictures are never inverted or dimmed — a page keeps
+     its real colours and gets a faint edge instead, so a white page sits on
+     the dark ground rather than glaring out of it. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121419; --paper: #1B1E25;
+      --ink: #E6E8EC; --ink-soft: #A3AAB7; --ink-faint: #8F97A5;
+      --line: #2C313B; --line-soft: #242830;
+      --accent: #8FB0E8; --accent-soft: #23324A; --accent-hover: #A7C2EE;
+      --on-accent: #10141B; --on-ink: #121419;
+      --danger: #F0937D; --danger-icon: #E07A62;
+      --notice: #E3B472; --notice-soft: #3A2E1C;
+      --placeholder: #23272F; --placeholder-stripe: #262A33;
+      --canvas: #0E1014;
+      --working: rgba(27,30,37,.72); --working-wait: rgba(27,30,37,.88); --working-err: rgba(27,30,37,.88);
+      --glass: rgba(18,20,25,.82);
+      --scrim: rgba(0,0,0,.6);
+      --drop-tint: rgba(143,176,232,.14); --drop-card: rgba(27,30,37,.92);
+      --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A3AAB7' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+      --shadow-lift: 0 2px 4px rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.45);
+      --shadow-panel: -20px 0 60px rgba(0,0,0,.5);
+      --page-edge: rgba(255,255,255,.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  /* Sideways only: the header row and the view each set their own top and
+     bottom, which a shorthand here would undo — or theirs would undo this, and
+     the header's search would stop lining up with the view beneath it. No
+     width cap: the grid takes whatever width it is given, and the views that
+     read as a column (the lists, an Entity's head) cap their own. */
+  .wrap { padding-inline: 28px; }
+
+  /* Sidebar beside a column holding the header and the section being viewed. */
+  .app { display: flex; align-items: flex-start; min-height: 100vh; }
+  .column { flex: 1; min-width: 0; }
+  /* Above the view beside it, so a card's shadow stops at its edge; below the
+     header, which spans the view and has to stay on top of both. */
+  .sidebar { position: sticky; top: 0; z-index: 10; flex: none; width: 214px; height: 100vh; display: flex; flex-direction: column; gap: 16px; padding: 17px 14px; background: var(--paper); border-right: 1px solid var(--line); }
+  /* The brand appears in the sidebar, and again on the login gate. */
+  .brand { display: flex; align-items: baseline; gap: 9px; }
+  .brand h1 { font-family: var(--serif); font-weight: 600; font-size: 21px; margin: 0; letter-spacing: -.01em; }
+  .brand .tag { font-size: 12px; color: var(--ink-soft); }
+  .sidebar .brand { flex-direction: column; align-items: flex-start; gap: 1px; padding: 0 8px; }
+  .count { font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; padding: 0 8px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav a { display: block; font-size: 14px; color: var(--ink-soft); text-decoration: none; padding: 8px 10px; border-radius: 8px; transition: background .12s ease, color .12s ease; }
+  .nav a:hover { background: var(--line-soft); color: var(--ink); }
+  .nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  /* The section an entity's page sits below: where the reader is, without being
+     the page they are on. Marked, but not as the destination itself. */
+  .nav a[aria-current="true"] { color: var(--ink); font-weight: 600; }
+  .nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Shortcuts to the entities the Library's Documents involve most. They sit
+     below the destinations and lead to pages beneath them, so they are set
+     smaller and indented: a way to one entity, not a section of their own. */
+  .shortcuts[hidden] { display: none; }
+  .shortcuts h2 { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); margin: 0 0 4px; padding: 0 10px; }
+  .shortcuts a { display: flex; align-items: baseline; gap: 8px; font-size: 13px; padding: 6px 10px 6px 18px; }
+  .shortcuts a[aria-current] { background: var(--accent-soft); color: var(--accent); }
+  .shortcuts .sc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* A name and the count of Documents it accounts for, in the sidebar and in
+     the browse lists alike, so a count reads the same wherever it is shown. */
+  .ent-count { flex: none; font-size: 11.5px; font-variant-numeric: tabular-nums; color: var(--ink-faint); }
+  /* Available to a screen reader, which cannot see that the column is a count. */
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  /* The browse lists: one list per page, its rows divided rather than each a
+     card of its own, since a list runs to dozens. Organizations are the spine,
+     each a heading with the People who appeared for it beneath; People
+     belonging to none are a list of their own. A column wide enough that a
+     name, its marks and its count sit on one line. */
+  .entities { max-width: 760px; margin: 0; padding: 0; list-style: none; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .entities > :where(li + li), .org + .org { border-top: 1px solid var(--line); }
+  /* Every row is a link to that entity's own page, which is what the lists are
+     for; the whole row is the target rather than the name within it. */
+  .ent { display: flex; align-items: baseline; gap: 12px; padding: 12px 18px; color: inherit; text-decoration: none; transition: background .12s ease; }
+  .ent-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; word-break: break-word; }
+  /* An Organization heads its section: the heading is the row, set as one. */
+  .org-head { margin: 0; font: inherit; }
+  .org-head .ent-name { font-size: 15px; font-weight: 600; }
+  /* The People under an Organization, set back from it and lighter: they belong
+     to the heading above rather than standing beside it, so their dividers
+     start where they do. */
+  .under { margin: 0 0 6px; padding: 0; list-style: none; }
+  .under > :where(li) { margin-left: 22px; border-top: 1px solid var(--line-soft); }
+  .under .ent { padding: 8px 18px 8px 12px; }
+  .under .ent-name { font-size: 13.5px; font-weight: 400; color: var(--ink-soft); }
+  .ent:hover { background: var(--accent-soft); }
+  /* The count too: --ink-faint is too faint to read on the hover's tint. */
+  .ent:hover :is(.ent-name, .ent-count) { color: var(--accent); }
+  .ent:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* One entity's own page: who they are, then their Documents under the part
+     they played in each. The groups are the page's order, which is why each
+     carries its heading above an ordinary grid of cards. */
+  .ent-page { display: flex; flex-direction: column; gap: 30px; }
+  .ep-head { display: flex; flex-direction: column; gap: 8px; max-width: 620px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 22px; }
+  .ep-head h2 { font-family: var(--serif); font-weight: 600; font-size: 22px; line-height: 1.25; margin: 0; word-break: break-word; }
+  .ep-count { margin: 0; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .ep-facts a { color: var(--accent); text-decoration: none; }
+  .ep-facts a:hover { text-decoration: underline; }
+  .ep-role h3, .ep-alike h3 { display: flex; align-items: baseline; gap: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); margin: 0 0 14px; }
+
+  /* What the owner can do to a name, on the page that shows the name: saying it
+     is the same as another, and taking such a statement back. */
+  .ep-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .ep-same { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px solid transparent; border-radius: 8px; padding: 7px 13px; cursor: pointer; transition: border-color .15s ease; }
+  .ep-same:hover { border-color: var(--accent); }
+  .ep-same:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ep-same:disabled { color: var(--ink-faint); background: var(--line-soft); cursor: default; border-color: transparent; }
+  /* A name merged in, with the one Merge that can be taken back beside it. */
+  .ep-merged { display: inline-flex; align-items: baseline; gap: 7px; margin-right: 12px; }
+  .ep-undo { font: inherit; font-size: 11.5px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; cursor: pointer; }
+  .ep-undo:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .ep-undo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* The names that look like this one. A suggestion, so it is set as a question
+     the owner may leave alone rather than as something needing to be cleared. */
+  .ep-alike { max-width: 620px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 22px; }
+  .ep-alike .ep-note { margin: -8px 0 12px; font-size: 12px; color: var(--ink-faint); }
+  .ep-alike ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .ep-alike li { display: flex; align-items: baseline; gap: 10px; }
+  .ep-alike li a { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--accent); text-decoration: none; word-break: break-word; }
+  .ep-alike li a:hover { text-decoration: underline; }
+  /* The same question in a browse list, where there is room for a word and not
+     for the pair: the row leads to the page that can answer it. A question
+     rather than a warning, so it is said in the row's own small type, tinted
+     and marked with a dot, rather than shouted from a filled capitals label. */
+  .ent-alike { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--notice); white-space: nowrap; }
+  .ent-alike::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .7; }
+
+  /* The Person the reader has marked as Me, labelled wherever they are shown:
+     as a row of a browse list, and at the head of their own page. */
+  .me-tag { flex: none; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 7px; }
+  /* In the page's heading it stands beside serif display type rather than in a
+     row of its own, so it is lifted off that baseline instead of sharing it. */
+  .ep-head h2 .me-tag { vertical-align: middle; margin-left: 9px; }
+  /* Where the mark is made: beside "Same as…" in the row of what the owner can
+     do to a name, and quieter than it — a statement made once about whose
+     paperwork this is, not the thing the page is for. */
+  .me-btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--accent); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 7px 13px; cursor: pointer; transition: background .12s ease, border-color .12s ease; }
+  .me-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .me-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header { position: sticky; top: 0; z-index: 20; background: var(--glass); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+  .head-row { display: flex; align-items: center; gap: 18px; padding-block: 15px; flex-wrap: wrap; }
+
+  .search { position: relative; flex: 1 1 260px; max-width: 440px; margin-right: auto; }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-faint); }
+  .search input { width: 100%; font: inherit; font-size: 14px; padding: 9px 12px 9px 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); }
+  .search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  select { font: inherit; font-size: 13px; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 28px 8px 10px; background: var(--paper) var(--select-arrow) no-repeat right 9px center; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  /* The section being viewed, in one stacking context below the header that
+     floats over it. Without it, what the view draws is only sometimes beneath
+     that header — a card of its own was painting over the search box — and
+     which one wins would depend on how each view happens to be built. */
+  main { position: relative; z-index: 0; padding-block: 26px 60px; }
+  /* As many columns as fit at 200px or wider, across the whole width. */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+
+  .card { text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 0; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); transition: transform .18s ease, box-shadow .18s ease; }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .thumb { position: relative; aspect-ratio: 3 / 4; background: var(--placeholder); overflow: hidden; border-bottom: 1px solid var(--line-soft); }
+  .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  /* Two-layer thumbnail: a blurred cover copy fills the box (scaled up to hide
+     blur's faded edges) so landscape docs letterbox onto a fill of themselves,
+     with the sharp full document contained on top. */
+  .thumb img.bg { object-fit: cover; object-position: center; filter: blur(16px) saturate(1.15); transform: scale(1.3); opacity: .6; z-index: 1; }
+  .thumb img.fg { object-fit: contain; object-position: center; z-index: 2; }
+  .thumb .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: .06em; color: var(--ink-faint); background: repeating-linear-gradient(135deg, var(--placeholder), var(--placeholder) 10px, var(--placeholder-stripe) 10px, var(--placeholder-stripe) 20px); }
+  .body { padding: 12px 13px 13px; display: flex; flex-direction: column; gap: 7px; }
+  .name { font-size: 14px; font-weight: 500; line-height: 1.35; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-soft); }
+  .meta .dt { color: var(--ink-faint); }
+  .meta .undated { font-style: italic; color: var(--ink-faint); opacity: .8; }
+  .snippet { font-size: 12px; color: var(--ink-soft); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* The Transcription passage a search found the card by: longer than a summary
+     line, since the match it exists to show sits mid-passage. */
+  .snippet.passage { -webkit-line-clamp: 3; font-style: italic; }
+  .snippet.passage mark { font-style: normal; background: var(--accent-soft); color: var(--ink); border-radius: 3px; padding: 0 2px; }
+  .who { font-size: 11.5px; color: var(--ink-soft); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .state { text-align: center; padding: 90px 20px; color: var(--ink-soft); }
+  .state h2 { font-family: var(--serif); font-size: 20px; color: var(--ink); margin: 0 0 8px; }
+  .state code { font-family: var(--mono); font-size: 13px; background: var(--line-soft); padding: 2px 7px; border-radius: 5px; color: var(--ink); }
+  /* The empty Library doubles as a click-to-browse target; no other state does. */
+  .state-empty { cursor: pointer; }
+  .state .hint { font-size: 12px; color: var(--ink-faint); }
+
+  .scrim { position: fixed; inset: 0; z-index: 50; background: var(--scrim); backdrop-filter: blur(3px); display: flex; justify-content: flex-end; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  /* "shown", not "open": .open is the "Open original" button, whose fill and
+     padding the scrim would take on. */
+  .scrim.shown { opacity: 1; pointer-events: auto; }
+  .panel { width: min(468px, 100%); height: 100%; background: var(--paper); color: var(--ink); border-left: 1px solid var(--line); box-shadow: var(--shadow-panel); overflow-y: auto; transform: translateX(24px); transition: transform .24s ease; }
+  .scrim.shown .panel { transform: translateX(0); }
+
+  /* The Document's pages, one above the next on a light canvas, each an image
+     the server rendered, so they look the same in every browser. A page not
+     yet loaded keeps an A4 page's shape, so only those near the viewport load. */
+  .viewer { flex: 1; min-width: 0; height: 100%; display: none; overflow-y: auto; overscroll-behavior: contain; background: var(--canvas); }
+  .scrim.has-preview .viewer { display: block; }
+  .viewer:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .pages { display: flex; flex-direction: column; align-items: center; gap: clamp(12px, 1.5vw, 20px); max-width: 920px; margin: 0 auto; padding: clamp(12px, 2.5vw, 32px); }
+  .page { width: 100%; margin: 0; aspect-ratio: 210 / 297; background: var(--paper); box-shadow: var(--shadow); outline: 1px solid var(--page-edge); }
+  /* Loaded, a page is as wide as its image up to the column: a rendered PDF
+     page always fills it, and a small photo isn't blown up past its size. */
+  .page.loaded { width: auto; max-width: 100%; aspect-ratio: auto; }
+  .page img { display: block; max-width: 100%; height: auto; }
+  .page-missing { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; color: var(--ink-soft); background: repeating-linear-gradient(135deg, var(--placeholder), var(--placeholder) 10px, var(--placeholder-stripe) 10px, var(--placeholder-stripe) 20px); }
+  .page-missing p { margin: 0; font-size: 14px; }
+
+  .p-head { display: flex; gap: 16px; align-items: flex-start; padding: 24px 26px 22px; background: var(--ground); border-bottom: 1px solid var(--line); position: relative; }
+  .p-close { position: absolute; top: 16px; right: 18px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); cursor: pointer; display: grid; place-items: center; color: var(--ink-soft); transition: color .15s ease, border-color .15s ease; }
+  .p-close:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .p-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .p-thumb { flex: none; width: 92px; aspect-ratio: 3/4; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--placeholder); box-shadow: var(--shadow); }
+  .p-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+  .p-head-text { flex: 1; min-width: 0; padding-right: 34px; }
+  .p-head h2 { font-family: var(--serif); font-weight: 600; font-size: 20px; line-height: 1.25; margin: 9px 0 0; color: var(--ink); word-break: break-word; }
+
+  .p-sec { padding: 20px 26px; border-bottom: 1px solid var(--line-soft); }
+  .p-sec:last-child { border-bottom: none; }
+  .p-sec h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); margin: 0 0 12px; }
+  .p-summary { font-size: 14px; font-weight: 400; line-height: 1.65; color: var(--ink); margin: 0; }
+  .p-file { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); word-break: break-all; margin-top: 12px; }
+  .kv { display: grid; grid-template-columns: 84px 1fr; gap: 10px 14px; font-size: 13.5px; margin: 0; }
+  .kv dt { color: var(--ink-soft); }
+  .kv dd { margin: 0; color: var(--ink); word-break: break-word; }
+  .kv dd.mono { font-family: var(--mono); font-size: 12px; }
+  .open { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--on-accent); background: var(--accent); text-decoration: none; padding: 10px 16px; border-radius: 9px; transition: background .15s ease; }
+  .open:hover { background: var(--accent-hover); }
+  .open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .del-btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--danger); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 13px; cursor: pointer; transition: border-color .12s ease; }
+  .del-btn:hover { border-color: var(--danger); }
+  .del-btn:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
+  .del-btn.confirm { color: var(--on-accent); background: var(--danger); border-color: var(--danger); }
+  .del-btn.cancel { color: var(--ink-soft); }
+  .del-btn.cancel:hover { border-color: var(--ink-faint); color: var(--ink); }
+  .del-btn:disabled { opacity: .6; cursor: default; }
+  .del-ask { font-size: 14px; color: var(--ink); margin: 0 0 12px; }
+  .del-actions { display: flex; gap: 8px; }
+
+  .add-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--on-accent); background: var(--accent); border: 0; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: background .15s ease; }
+  .add-btn:hover { background: var(--accent-hover); }
+  .add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .add-btn svg { flex: none; }
+
+  .dropzone { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 32px; background: var(--drop-tint); backdrop-filter: blur(2px); }
+  .dropzone.on { display: flex; }
+  .dropzone-card { display: flex; flex-direction: column; align-items: center; gap: 14px; color: var(--accent); background: var(--drop-card); border: 2px dashed var(--accent); border-radius: 18px; padding: 48px 64px; box-shadow: var(--shadow-lift); pointer-events: none; }
+  .dropzone-card p { margin: 0; font-family: var(--serif); font-size: 19px; font-weight: 600; }
+
+  .card.enriching { pointer-events: none; }
+  .card.enriching .body { opacity: .5; }
+  .thumb .working { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--working); backdrop-filter: blur(1px); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; }
+  .thumb .working.err { color: var(--ink-soft); background: var(--working-err); }
+  .spinner { width: 26px; height: 26px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .card.errored { cursor: pointer; }
+  .thumb .working.err svg { color: var(--danger-icon); }
+  .retry-hint { color: var(--accent); }
+
+  .toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast { background: var(--ink); color: var(--on-ink); font-size: 13px; padding: 9px 16px; border-radius: 8px; box-shadow: var(--shadow-lift); opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease; max-width: 80vw; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.err { background: var(--danger); }
+
+  /* A small list of actions dropped from the button that names them: Add's
+     choice of camera or files, and the "⋯" menu. Only a phone shows either. */
+  .menu-wrap { position: relative; }
+  .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 25; min-width: 184px; display: flex; flex-direction: column; padding: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow-lift); transform-origin: top right; animation: menu-in .14s ease; }
+  .menu[hidden] { display: none; }
+  .menu button { display: flex; align-items: center; gap: 11px; min-height: 44px; font: inherit; font-size: 15px; text-align: left; color: var(--ink); background: none; border: 0; border-radius: 7px; padding: 0 12px; cursor: pointer; }
+  .menu button svg { flex: none; color: var(--ink-soft); }
+  .menu button:hover, .menu button:focus { outline: none; background: var(--accent-soft); color: var(--accent); }
+  .menu button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+
+  /* The parts of the header only a phone has, and the bottom tab bar. */
+  .bar-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; font: inherit; color: var(--ink-soft); background: none; border: 1px solid transparent; border-radius: 9px; padding: 0; cursor: pointer; }
+  .bar-btn:hover { color: var(--ink); background: var(--line-soft); }
+  .bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .bar-btn[hidden] { display: none; }
+  /* After .bar-btn, whose display would otherwise show them on a desktop. */
+  .head-brand, .search-open, .search-close, .add-choice, .more, .view-tools, .tabs { display: none; }
+
+  /* A phone: one compact bar along the top — the wordmark, search, Add and a
+     "⋯" menu holding Settings and Sign out — and the destinations in a tab bar
+     along the bottom, under the thumb. The sidebar and its shortcuts are a
+     desktop's. */
+  @media (max-width: 760px) {
+    .app { display: block; min-height: 0; }
+    .sidebar { display: none; }
+    .wrap { padding-inline: max(16px, env(safe-area-inset-left)) max(16px, env(safe-area-inset-right)); }
+    header { padding-top: env(safe-area-inset-top); }
+    .head-row { flex-wrap: nowrap; gap: 6px; padding-block: 8px; }
+    .head-brand { display: block; margin-right: auto; font-family: var(--serif); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--ink); }
+    .search-open, .more { display: inline-flex; }
+    .add-choice { display: block; }
+    #add-btn, #settings-btn, #logout-btn { display: none; }
+    .add-choice .add-btn { padding-inline: 13px; }
+    /* Search opens across the whole bar, and closes back to its button. */
+    .search { display: none; }
+    header.searching .search { display: block; flex: 1 1 auto; max-width: none; margin: 0; }
+    header.searching .search-close { display: inline-flex; }
+    header.searching :is(.head-brand, .search-open, .add-choice, .more) { display: none; }
+
+    /* What the sidebar said about the Documents and what the header ordered
+       them by, at the top of the Documents instead: it scrolls away with them. */
+    main { padding-block: 14px calc(var(--tabs-h) + env(safe-area-inset-bottom) + 28px); }
+    .view-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .view-tools[hidden] { display: none; }
+    .view-tools .count { padding: 0; font-size: 13px; color: var(--ink-soft); }
+
+    .tabs { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; display: flex; padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: var(--glass); backdrop-filter: saturate(1.4) blur(10px); border-top: 1px solid var(--line); }
+    .tabs a { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--tabs-h); font-size: 11.5px; font-weight: 500; color: var(--ink-soft); text-decoration: none; }
+    .tabs a[aria-current] { color: var(--accent); font-weight: 600; }
+    .tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 10px; }
+    .toasts { bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom) + 12px); }
+    /* Two Documents side by side, their thumbnails cut shorter so a screen
+       holds more than one row; a portrait page letterboxes onto its own blur. */
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .thumb { aspect-ratio: 1; }
+    .body { padding: 10px 11px 11px; gap: 5px; }
+    /* The lists keep their indents but give the name the width they save. */
+    .ent { padding-inline: 14px; }
+    .under > :where(li) { margin-left: 16px; }
+  }
+
+  /* A phone: the Document fills the screen as one sheet scrolled top to
+     bottom — its pages first, then what the panel says about it. Close stays
+     at the top and "Open original" along the bottom, in reach wherever the
+     sheet is scrolled to. Nothing in it is transformed once it is open, so the
+     two stay fixed to the screen rather than to the sheet. */
+  @media (max-width: 760px) {
+    /* How far the fixed Close and "Open original" reach into the sheet, which
+       its content and anything focused in it keep clear of. */
+    :root { --sheet-top: calc(env(safe-area-inset-top) + 64px); --sheet-bottom: calc(env(safe-area-inset-bottom) + 76px); }
+    .scrim { display: block; overflow-y: auto; overscroll-behavior: contain; scroll-padding: var(--sheet-top) 0 var(--sheet-bottom); background: var(--canvas); backdrop-filter: none; }
+    .scrim.shown { animation: sheet-in .24s ease; }
+    .scrim.has-preview .viewer { height: auto; overflow: visible; }
+    .pages { padding: var(--sheet-top) max(12px, env(safe-area-inset-right)) 20px max(12px, env(safe-area-inset-left)); }
+    .panel, .scrim.shown .panel { width: 100%; height: auto; min-height: 100%; overflow: visible; border-left: 0; box-shadow: none; transform: none; transition: none; padding-bottom: var(--sheet-bottom); }
+    .scrim:not(.has-preview) .p-head { padding-top: calc(env(safe-area-inset-top) + 24px); }
+    .p-head-text { padding-right: 48px; } /* clear of Close as it passes */
+    .p-close { position: fixed; z-index: 2; top: calc(env(safe-area-inset-top) + 10px); right: max(12px, env(safe-area-inset-right)); width: 44px; height: 44px; border-radius: 22px; box-shadow: var(--shadow); }
+    .p-open { position: fixed; z-index: 2; inset-inline: 0; bottom: 0; padding: 12px max(16px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: var(--glass); backdrop-filter: saturate(1.4) blur(10px); border-top: 1px solid var(--line); border-bottom: 0; }
+    .p-open .open { display: flex; justify-content: center; min-height: 44px; }
+  }
+  @keyframes sheet-in { from { opacity: 0; transform: translateY(24px); } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none; } .spinner { animation-duration: 1.4s; } .menu, .scrim.shown { animation: none; } }
+
+  /* Asking that two names be one: the picker over the names of the same kind,
+     and the choice of which spelling is shown from then on. */
+  .same-as { border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lift); background: var(--paper); color: var(--ink); padding: 0; width: min(430px, calc(100vw - 32px)); }
+  .same-as::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
+  .same-as form { display: flex; flex-direction: column; gap: 12px; padding: 24px 26px; }
+  .same-as h2 { font-family: var(--serif); font-weight: 600; font-size: 19px; margin: 0; }
+  .same-as p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .same-as label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); margin-bottom: -6px; }
+  .same-as select, .same-as input { font: inherit; font-size: 14px; width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); }
+  .same-as select { -webkit-appearance: none; appearance: none; background: var(--paper) var(--select-arrow) no-repeat right 11px center; padding-right: 30px; cursor: pointer; }
+  .same-as select:focus, .same-as input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .same-as input[hidden] { display: none; }
+  .same-as-status { min-height: 17px; font-size: 12.5px; color: var(--ink-soft); }
+  .same-as-status.err { color: var(--danger); }
+  .same-as-row { display: flex; justify-content: flex-end; gap: 10px; }
+  .same-as-row button { font: inherit; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 9px 16px; cursor: pointer; }
+  #same-as-cancel { color: var(--ink-soft); background: none; border: 1px solid var(--line); }
+  #same-as-cancel:hover { color: var(--ink); border-color: var(--ink-faint); }
+  #same-as-submit { color: var(--on-accent); background: var(--accent); border: 0; }
+  #same-as-submit:hover { background: var(--accent-hover); }
+  #same-as-submit:disabled { opacity: .6; cursor: default; }
+  .same-as-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Settings borrows the Same-as dialog's look, with a wider form. */
+  .settings { width: min(500px, calc(100vw - 32px)); }
+  .settings h3 { font-size: 13px; font-weight: 600; margin: 4px 0 -4px; }
+  .settings form + form { border-top: 1px solid var(--line); }
+  .settings form[hidden] { display: none; }
+  .pw-current[hidden] { display: none; }
+  .prov-row { display: flex; gap: 8px; }
+  .prov-row input { flex: 1; min-width: 0; }
+  .prov-aside, #prov-cancel, #prov-clear, .prov-waiting button { font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .prov-aside:hover, #prov-cancel:hover, #prov-clear:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .prov-aside[hidden], #prov-clear[hidden], .prov-waiting[hidden] { display: none; }
+  .prov-aside:disabled { opacity: .6; cursor: default; }
+  #prov-clear { margin-right: auto; color: var(--danger); }
+  #prov-save, #pw-save, #lang-save, #passkey-add { color: var(--on-accent); background: var(--accent); border: 0; }
+  #prov-save:hover, #pw-save:hover, #lang-save:hover, #passkey-add:hover { background: var(--accent-hover); }
+  #prov-save:disabled, #pw-save:disabled, #lang-save:disabled, #passkey-add:disabled { opacity: .6; cursor: default; }
+  .prov-waiting, .waiting-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--ink-soft); background: var(--line-soft); border-radius: 9px; padding: 10px 12px; }
+  .prov-waiting button, .waiting-notice button { color: var(--accent); border-color: var(--accent); background: var(--paper); font-weight: 600; }
+  .waiting-notice { margin-bottom: 16px; }
+  .waiting-notice button { font: inherit; font-size: 13px; font-weight: 600; border: 1px solid var(--accent); border-radius: 9px; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+  .settings-link { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .waiting-notice .settings-link { text-decoration: none; }
+  .thumb .working.wait { color: var(--ink-soft); background: var(--working-wait); text-align: center; }
+  .icon-btn { display: inline-flex; align-items: center; padding: 8px 9px; }
+
+  /* Login gate — full-screen overlay shown until a session is established. */
+  .gate { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; background: var(--ground); padding: 24px; }
+  .gate.on { display: flex; }
+  .gate-card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lift); padding: 40px 36px; max-width: 380px; width: 100%; text-align: center; }
+  .gate-card .brand { justify-content: center; margin-bottom: 6px; }
+  .gate-card h1 { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 0; }
+  .gate-card p { color: var(--ink-soft); font-size: 14px; margin: 8px 0 24px; }
+  .gate-btn { font: inherit; font-size: 15px; font-weight: 500; color: var(--on-accent); background: var(--accent); border: none; border-radius: 10px; padding: 12px 22px; cursor: pointer; display: inline-flex; align-items: center; gap: 9px; transition: filter .15s ease; }
+  .gate-btn:hover { filter: brightness(1.08); }
+  .gate-btn:disabled { opacity: .6; cursor: default; }
+  .gate-pw { display: flex; flex-direction: column; gap: 10px; }
+  .gate-pw[hidden], .gate-btn[hidden] { display: none; }
+  .gate-pw input { font: inherit; font-size: 15px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); }
+  .gate-pw input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .gate-pw .gate-btn { justify-content: center; }
+  /* Beside a password form, the passkey is the second way in. */
+  .gate-pw:not([hidden]) + .gate-btn { margin-top: 12px; color: var(--accent); background: none; border: 1px solid var(--line); }
+  .gate-status { margin-top: 16px; font-size: 13px; min-height: 18px; color: var(--ink-soft); }
+  .gate-status.err { color: var(--danger); }
+  /* Setup — the gate's first-run variant: one step at a time, in a wider card. */
+  .setup-card { max-width: 440px; text-align: left; }
+  .setup-card .brand, .setup-card > p { text-align: center; }
+  .setup-step { display: flex; flex-direction: column; gap: 12px; }
+  .setup-step[hidden] { display: none; }
+  .setup-step h2 { font-family: var(--serif); font-weight: 600; font-size: 18px; margin: 0; }
+  .setup-step p { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  .setup-step label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); margin-bottom: -6px; }
+  .setup-step input, .setup-step select { font: inherit; font-size: 14px; width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); color: var(--ink); }
+  .setup-step input:focus, .setup-step select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .setup-step code { font-size: 12px; }
+  .setup-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+  .setup-row .gate-btn { font-size: 14px; padding: 9px 16px; }
+  .setup-back, .setup-skip { font: inherit; font-size: 14px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; cursor: pointer; }
+  .setup-back { margin-right: auto; }
+  .setup-back:hover, .setup-skip:hover { color: var(--ink); border-color: var(--ink-faint); }
+  #setup .gate-status { text-align: center; }
+
+  .logout-btn { font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .logout-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
+  .logout-btn[hidden] { display: none; }
+  /* The controls without a ring of their own above take the accent's, rather
+     than the browser's, so every ring is one the palette checks in both
+     schemes. */
+  :is(.logout-btn, .gate-btn, .setup-back, .setup-skip, .prov-aside, #prov-cancel, #prov-clear, .waiting-notice button, .prov-waiting button, .settings-link):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (max-width: 760px) {
+    /* Fingers rather than a pointer: every control at least 44px each way, and
+       every field set at 16px, below which iOS zooms the page on focus. Last in
+       the sheet, so it wins over the rules each control is styled by above. */
+    .ent, .ep-alike li a { display: flex; align-items: center; min-height: 44px; }
+    .add-btn, .logout-btn, select, .search input, .ep-same, .me-btn, .ep-undo, .open, .del-btn,
+    .same-as select, .same-as input, .same-as-row button, .prov-aside, #prov-cancel, #prov-clear,
+    .prov-waiting button, .waiting-notice button, .gate-btn, .gate-pw input, .setup-step input,
+    .setup-step select, .setup-back, .setup-skip { min-height: 44px; }
+    .ep-facts a { display: inline-flex; align-items: center; min-height: 44px; }
+    .icon-btn, .p-close { min-width: 44px; min-height: 44px; justify-content: center; }
+    select, .search input, .same-as select, .same-as input, .gate-pw input, .setup-step input, .setup-step select { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<aside class="sidebar">
+  <div class="brand">
+    <h1>Zayla</h1>
+  </div>
+  <span class="count" id="count"></span>
+  <!-- Filled from the destinations in src/routes.ts, so the sidebar and the
+       paths the server serves can't drift apart. -->
+  <nav class="nav" id="nav" aria-label="Sections"></nav>
+  <!-- The entities the Library's Documents involve most, filled from
+       /api/entities. Hidden while the Library involves nobody. -->
+  <nav class="nav shortcuts" id="shortcuts" aria-labelledby="shortcuts-head" hidden></nav>
+</aside>
+
+<div class="column">
+
+<header id="top">
+  <div class="wrap head-row" id="head-row">
+    <span class="head-brand">Zayla</span>
+    <div class="search" id="search">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="Search your documents…" aria-label="Search" autocomplete="off">
+    </div>
+    <button id="search-open" class="bar-btn search-open" type="button" aria-label="Search" aria-expanded="false" aria-controls="search">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+    <button id="search-close" class="bar-btn search-close" type="button" aria-label="Close search">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <select id="sort" aria-label="Sort">
+      <option value="new">Newest</option>
+      <option value="old">Oldest</option>
+      <option value="added">Recently added</option>
+      <option value="name">Name</option>
+      <option value="size">Largest</option>
+    </select>
+    <button id="add-btn" class="add-btn" type="button">
+      <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+      Add
+    </button>
+    <!-- A phone's Add: a photo from the rear camera, or files as on a desktop. -->
+    <div class="menu-wrap add-choice">
+      <button id="add-menu-btn" class="add-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="add-menu">
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        Add
+      </button>
+      <div class="menu" id="add-menu" role="menu" aria-labelledby="add-menu-btn" hidden>
+        <button id="take-photo" type="button" role="menuitem" tabindex="-1">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Take photo
+        </button>
+        <button id="choose-files" type="button" role="menuitem" tabindex="-1">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5"/></svg>
+          Choose files
+        </button>
+      </div>
+    </div>
+    <input id="file-input" type="file" multiple accept=".pdf,image/*,application/pdf" hidden>
+    <input id="camera-input" type="file" accept="image/*" capture="environment" hidden>
+    <button id="settings-btn" class="logout-btn icon-btn" type="button" aria-label="Settings" title="Settings" hidden>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+    </button>
+    <button id="logout-btn" class="logout-btn" type="button" hidden>Sign out</button>
+    <div class="menu-wrap more">
+      <button id="more-btn" class="bar-btn" type="button" aria-label="More" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu" hidden>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
+      </button>
+      <div class="menu" id="more-menu" role="menu" aria-labelledby="more-btn" hidden>
+        <button id="more-settings" type="button" role="menuitem" tabindex="-1">Settings</button>
+        <button id="more-logout" type="button" role="menuitem" tabindex="-1">Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- A phone's count and sort, which a desktop shows in the sidebar and the
+       header. The sort control is moved here while the layout is a phone's. -->
+  <div class="view-tools" id="view-tools"><span class="count" id="view-count"></span></div>
+  <div id="view"></div>
+</main>
+
+</div><!-- .column -->
+</div><!-- .app -->
+
+<!-- A phone's destinations, filled from the same list as the sidebar's. -->
+<nav class="tabs" id="tabs" aria-label="Sections"></nav>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="brand"><h1>Zayla</h1></div>
+    <p id="gate-msg">Sign in to your library.</p>
+    <form id="gate-pw-form" class="gate-pw" hidden>
+      <input id="gate-pw" type="password" aria-label="Password" placeholder="Password" autocomplete="current-password" required>
+      <button id="gate-pw-btn" class="gate-btn" type="submit">Sign in</button>
+    </form>
+    <button id="gate-btn" class="gate-btn" type="button">
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <span id="gate-btn-label">Sign in with passkey</span>
+    </button>
+    <div class="gate-status" id="gate-status" role="status"></div>
+  </div>
+</div>
+
+<!-- Setup: how a Library with no user gets its owner. Shown instead of the
+     gate while nobody exists, and never again once someone does. -->
+<div class="gate" id="setup">
+  <div class="gate-card setup-card">
+    <div class="brand"><h1>Zayla</h1></div>
+    <p>Let's set up your library.</p>
+    <form class="setup-step" id="setup-code-form">
+      <h2>Setup code</h2>
+      <p>The server printed a one-time code in its logs when it started, for example in <code>docker logs</code>. It proves you're the one who started it.</p>
+      <label for="setup-code">Code</label>
+      <input id="setup-code" type="text" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" autocapitalize="characters" required>
+      <div class="setup-row">
+        <button type="submit" class="gate-btn">Continue</button>
+      </div>
+    </form>
+    <form class="setup-step" id="setup-pw-form" hidden>
+      <h2>Password</h2>
+      <p>You sign in with this. At least 8 characters; a passphrase you remember is best.</p>
+      <input type="text" autocomplete="username" value="owner" hidden>
+      <label for="setup-pw">Password</label>
+      <input id="setup-pw" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="setup-pw-again">Same again</label>
+      <input id="setup-pw-again" type="password" autocomplete="new-password" minlength="8" required>
+      <div class="setup-row">
+        <button type="button" class="setup-back">Back</button>
+        <button type="submit" class="gate-btn">Continue</button>
+      </div>
+    </form>
+    <form class="setup-step" id="setup-lang-form" hidden>
+      <h2>Reading languages</h2>
+      <p>Up to four, in order of preference. Each Document gets its title and summary in each of them. You can change these later in Settings.</p>
+      <label for="setup-lang-1">First</label>
+      <select id="setup-lang-1" required></select>
+      <label for="setup-lang-2">Second</label>
+      <select id="setup-lang-2"></select>
+      <label for="setup-lang-3">Third</label>
+      <select id="setup-lang-3"></select>
+      <label for="setup-lang-4">Fourth</label>
+      <select id="setup-lang-4"></select>
+      <div class="setup-row">
+        <button type="button" class="setup-back">Back</button>
+        <button type="submit" class="gate-btn">Continue</button>
+      </div>
+    </form>
+    <form class="setup-step" id="setup-prov-form" hidden>
+      <h2>Provider</h2>
+      <p id="setup-prov-intro">The model that reads your Documents, at a server speaking the OpenAI-compatible API. You can skip this: Documents are filed and wait to be read until you choose one in Settings.</p>
+      <label for="setup-prov-url">Address</label>
+      <input id="setup-prov-url" type="url" placeholder="https://openrouter.ai/api/v1" autocomplete="off" spellcheck="false" required>
+      <label for="setup-prov-key">Key</label>
+      <input id="setup-prov-key" type="password" placeholder="None (a local server usually needs none)" autocomplete="off" spellcheck="false">
+      <label for="setup-prov-model">Model</label>
+      <div class="prov-row">
+        <input id="setup-prov-model" type="text" list="setup-prov-models" placeholder="e.g. qwen/qwen3-vl" autocomplete="off" spellcheck="false" required>
+        <button type="button" id="setup-prov-find" class="prov-aside">List models</button>
+      </div>
+      <datalist id="setup-prov-models"></datalist>
+      <div class="setup-row">
+        <button type="button" class="setup-back">Back</button>
+        <button type="button" class="setup-skip" id="setup-skip">Skip</button>
+        <button type="submit" class="gate-btn">Finish</button>
+      </div>
+    </form>
+    <div class="gate-status" id="setup-status" role="status"></div>
+  </div>
+</div>
+
+<div class="dropzone" id="dropzone" aria-hidden="true">
+  <div class="dropzone-card">
+    <svg aria-hidden="true" width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+    <p>Drop documents to add</p>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- Saying that two names are one. Opened from an entity's own page, because
+     that is where the owner sees what they would be merging. -->
+<dialog class="same-as" id="same-as" aria-labelledby="same-as-title">
+  <form id="same-as-form">
+    <h2 id="same-as-title">Same as…</h2>
+    <p id="same-as-intro"></p>
+    <label for="same-as-who">Which name is the same?</label>
+    <select id="same-as-who"></select>
+    <label for="same-as-name">Name to show from now on</label>
+    <select id="same-as-name"></select>
+    <input id="same-as-spelling" type="text" aria-label="The spelling to show" placeholder="e.g. Acme" autocomplete="off" hidden>
+    <div class="same-as-status" id="same-as-status" role="status"></div>
+    <div class="same-as-row">
+      <button type="button" id="same-as-cancel">Cancel</button>
+      <button type="submit" id="same-as-submit">Merge</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Settings: the Provider that reads the user's Documents, chosen here
+     rather than in the environment, the languages they read them in, and the
+     user's password. -->
+<dialog class="same-as settings" id="settings" aria-labelledby="settings-title">
+  <form id="settings-form">
+    <h2 id="settings-title">Settings</h2>
+    <h3>Provider</h3>
+    <p>The model that reads your Documents, at a server speaking the OpenAI-compatible API. Changing it reads nothing again: Documents already read keep the reading they have.</p>
+    <label for="prov-url">Address</label>
+    <input id="prov-url" type="url" placeholder="https://openrouter.ai/api/v1" autocomplete="off" spellcheck="false" required>
+    <label for="prov-key">Key</label>
+    <div class="prov-row">
+      <input id="prov-key" type="password" autocomplete="off" spellcheck="false">
+      <button type="button" id="prov-key-remove" class="prov-aside" hidden>Remove key</button>
+    </div>
+    <label for="prov-model">Model</label>
+    <div class="prov-row">
+      <input id="prov-model" type="text" list="prov-models" placeholder="e.g. qwen/qwen3-vl" autocomplete="off" spellcheck="false" required>
+      <button type="button" id="prov-find" class="prov-aside">List models</button>
+    </div>
+    <datalist id="prov-models"></datalist>
+    <div class="same-as-status" id="prov-status" role="status"></div>
+    <div class="prov-waiting" id="prov-waiting" hidden></div>
+    <div class="same-as-row">
+      <button type="button" id="prov-clear" hidden>Clear Provider</button>
+      <button type="button" id="prov-cancel">Close</button>
+      <button type="submit" id="prov-save">Save</button>
+    </div>
+  </form>
+  <form id="lang-form">
+    <h3>Reading languages</h3>
+    <p>Up to four, in order of preference. Each Document read from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them reads nothing again.</p>
+    <label for="lang-1">First</label>
+    <select id="lang-1" class="lang-pick" required></select>
+    <label for="lang-2">Second</label>
+    <select id="lang-2" class="lang-pick"></select>
+    <label for="lang-3">Third</label>
+    <select id="lang-3" class="lang-pick"></select>
+    <label for="lang-4">Fourth</label>
+    <select id="lang-4" class="lang-pick"></select>
+    <div class="same-as-status" id="lang-status" role="status"></div>
+    <div class="same-as-row">
+      <button type="submit" id="lang-save">Save languages</button>
+    </div>
+  </form>
+  <form id="pw-form">
+    <h3>Password</h3>
+    <p id="pw-intro"></p>
+    <input type="text" autocomplete="username" value="owner" hidden>
+    <label for="pw-current" class="pw-current">Current password</label>
+    <input id="pw-current" class="pw-current" type="password" autocomplete="current-password">
+    <label for="pw-new">New password</label>
+    <input id="pw-new" type="password" autocomplete="new-password" minlength="8" required>
+    <div class="same-as-status" id="pw-status" role="status"></div>
+    <div class="same-as-row">
+      <button type="submit" id="pw-save">Set password</button>
+    </div>
+  </form>
+  <form id="passkey-form" hidden>
+    <h3>Passkey</h3>
+    <p>Sign in with this device's passkey instead of typing your password.</p>
+    <div class="same-as-status" id="passkey-status" role="status"></div>
+    <div class="same-as-row">
+      <button type="submit" id="passkey-add">Add a passkey</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="p-title">
+  <!-- biome-ignore lint/a11y/noNoninteractiveTabindex: the pages scroll on their own beside the panel, and only a focusable region can be scrolled from the keyboard -->
+  <section class="viewer" id="viewer" aria-label="Pages" tabindex="0"></section>
+  <div class="panel" id="panel"></div>
+</div>
+
+<script type="module" src="./frontend.ts"></script>
+</body>
+</html>

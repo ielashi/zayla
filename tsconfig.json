@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    // Environment setup & latest features
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  // The browser code is checked separately (with the DOM lib) via
+  // tsconfig.frontend.json, so it stays out of this server-flavoured program.
+  "exclude": ["node_modules", "frontend.ts"]
+}

@@ -1,0 +1,11 @@
+{
+  // Browser code: same strict settings as the server, but with the DOM lib.
+  // frontend.ts imports only the dependency-free src/shared.ts, so this program
+  // never pulls in Bun/server code (whose stream types clash with lib.dom).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
+  },
+  "include": ["frontend.ts"],
+  "exclude": ["node_modules"]
+}
