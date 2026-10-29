@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Scripts come only from Zayla itself: what a Document says is shown as text
+     (see src/html.ts), and this is what stops it running if it ever got in as
+     markup. Styles may be inline, as this page's own stylesheet is. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- The browser's own colours, and the bar around the page, follow the
      system's scheme before the stylesheet has run, so a dark one never
