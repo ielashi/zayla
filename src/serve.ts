@@ -832,7 +832,9 @@ export function startServer(port: number, lib: Library) {
       return notFoundPage();
     },
 
-    development: { hmr: true },
+    // Bundled on request with hot reloading while developing; built once,
+    // minified, when the image runs with NODE_ENV=production.
+    development: process.env.NODE_ENV !== "production" && { hmr: true },
     // Enrichment holds a request open while the model works — a cloud vision
     // call, or a local server loading a multi-GB model on first use — with no
     // bytes flowing to the client meanwhile. Bun's 10s default kills that; use the max (255s).
