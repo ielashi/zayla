@@ -2009,6 +2009,7 @@ el("pw-form").addEventListener("submit", async (e) => {
 const passkeyForm = el<HTMLFormElement>("passkey-form");
 const passkeyStatus = el("passkey-status");
 const passkeyAdd = el<HTMLButtonElement>("passkey-add");
+const passkeyIntro = el("passkey-intro");
 
 function setPasskeyStatus(msg: string, isErr = false) {
   passkeyStatus.textContent = msg;
@@ -2016,7 +2017,14 @@ function setPasskeyStatus(msg: string, isErr = false) {
 }
 
 function fillPasskey() {
-  passkeyForm.hidden = !passkeysWork();
+  // Over plain HTTP the browser has no passkeys at all, and the password form
+  // already says so. Where it has them but the server isn't told its address,
+  // say what's missing rather than offer a prompt that would fail.
+  passkeyForm.hidden = !browserHasPasskeys();
+  passkeyAdd.hidden = !passkeysWork();
+  passkeyIntro.textContent = passkeysOffered
+    ? "Sign in with this device's passkey instead of typing your password."
+    : "Passkeys need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://docs.example.com) and restart it.";
   setPasskeyStatus("");
 }
 
@@ -2053,9 +2061,17 @@ function setGateStatus(msg: string, isErr = false) {
   gateStatus.classList.toggle("err", isErr);
 }
 
+/** Whether the server has passkeys configured, as /api/auth/me last said. */
+let passkeysOffered = false;
+
 /** Passkeys need WebAuthn, which browsers offer only on secure origins. */
-function passkeysWork() {
+function browserHasPasskeys() {
   return window.isSecureContext && "PublicKeyCredential" in window;
+}
+
+/** Passkeys work where the browser has them and the server knows its address. */
+function passkeysWork() {
+  return browserHasPasskeys() && passkeysOffered;
 }
 
 /** Cover the app: with Setup while the Library has nobody, else the sign-in gate. */
@@ -2095,8 +2111,10 @@ async function refreshAuth() {
       authenticated: boolean;
       user: { hasPassword: boolean } | null;
       needsSetup: boolean;
+      passkeysOffered: boolean;
     };
     hasPassword = me.user?.hasPassword ?? false;
+    passkeysOffered = me.passkeysOffered;
     if (me.authenticated) enterApp();
     else showGate(me.needsSetup);
   } catch {

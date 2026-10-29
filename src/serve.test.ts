@@ -38,6 +38,8 @@ let library: Library;
 
 beforeEach(() => {
   process.env.LIBRARY_DIR = TMP;
+  // Passkeys are configured unless a test says otherwise.
+  process.env.ZAYLA_URL = "http://localhost:3000";
   library = openLibrary(TMP);
 });
 afterEach(async () => {
@@ -188,6 +190,41 @@ test("a passkey is added by someone signed in, never by a stranger", async () =>
       ).status,
     ).toBe(401);
     expect((await options(cookie)).status).toBe(200);
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("without ZAYLA_URL, passkeys are not offered and their ceremonies refuse", async () => {
+  delete process.env.ZAYLA_URL;
+  const cookie = authCookie("owner");
+  const server = startServer(0, library);
+  try {
+    const url = base(server);
+    expect(await me(server, cookie)).toMatchObject({
+      authenticated: true,
+      passkeysOffered: false,
+    });
+    for (const path of ["register/options", "login/options"]) {
+      const res = await fetch(`${url}/api/auth/${path}`, {
+        method: "POST",
+        headers: { cookie },
+      });
+      expect(res.status).toBe(409);
+      expect(((await res.json()) as { error: string }).error).toMatch(
+        /ZAYLA_URL/,
+      );
+    }
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("with ZAYLA_URL, passkeys are offered", async () => {
+  const cookie = authCookie("owner");
+  const server = startServer(0, library);
+  try {
+    expect(await me(server, cookie)).toMatchObject({ passkeysOffered: true });
   } finally {
     server.stop(true);
   }
@@ -403,7 +440,9 @@ function ownerWithPasskey() {
   });
 
   return (challenge: string) => {
-    const { rpID, rpOrigin } = authConfig();
+    const config = authConfig();
+    if (!config) throw new Error("these tests set ZAYLA_URL");
+    const { rpID, rpOrigin } = config;
     const clientDataJSON = Buffer.from(
       JSON.stringify({ type: "webauthn.get", challenge, origin: rpOrigin }),
     );
