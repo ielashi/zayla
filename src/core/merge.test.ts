@@ -244,7 +244,11 @@ test("merged Organizations are one affiliation, not two", async () => {
   const lib = openLibrary(TMP);
   try {
     await enrich(lib, "aaa".padEnd(64, "0"), from("Jane Doe", "Stadt Porto"));
-    await enrich(lib, "bbb".padEnd(64, "0"), from("Jane Doe", "stadt porto ag"));
+    await enrich(
+      lib,
+      "bbb".padEnd(64, "0"),
+      from("Jane Doe", "stadt porto ag"),
+    );
 
     mergeEntities(lib, idOf(lib, "Stadt Porto"), idOf(lib, "stadt porto ag"));
 

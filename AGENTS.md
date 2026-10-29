@@ -105,6 +105,10 @@ bun --hot ./index.ts
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
 
+## PRs
+
+PRs are squash-merged, so the PR title becomes the commit on `main`. Titles must follow Conventional Commits (`feat: …`, `fix(scope): …`); CI rejects any other title.
+
 ## Agent skills
 
 ### Issue tracker
