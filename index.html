@@ -443,12 +443,21 @@
   .settings { width: min(500px, calc(100vw - 32px)); }
   .settings h3 { font-size: 13px; font-weight: 600; margin: 4px 0 -4px; }
   .settings form + form { border-top: 1px solid var(--line); }
-  .settings form[hidden] { display: none; }
+  .settings form[hidden], .settings [role="tabpanel"][hidden], .settings .same-as-row[hidden] { display: none; }
+  /* Held near the top, not centred, so switching tabs never moves the tab row. */
+  .settings { margin-top: min(10vh, 80px); }
+  .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 24px 26px 0; }
+  .settings-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); cursor: pointer; display: grid; place-items: center; color: var(--ink-soft); }
+  .settings-close:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .settings-tabs { display: flex; gap: 4px; margin: 14px 26px 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .settings-tabs button { font: inherit; font-size: 14px; font-weight: 500; color: var(--ink-soft); background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+  .settings-tabs button:hover { color: var(--ink); }
+  .settings-tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
   .pw-current[hidden] { display: none; }
   .prov-row { display: flex; gap: 8px; }
   .prov-row input { flex: 1; min-width: 0; }
-  .prov-aside, #prov-cancel, #prov-clear, .prov-waiting button { font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
-  .prov-aside:hover, #prov-cancel:hover, #prov-clear:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .prov-aside, #prov-clear, .prov-waiting button { font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .prov-aside:hover, #prov-clear:hover { color: var(--ink); border-color: var(--ink-faint); }
   .prov-aside[hidden], #prov-clear[hidden], .prov-waiting[hidden] { display: none; }
   .prov-aside:disabled { opacity: .6; cursor: default; }
   #prov-clear { margin-right: auto; color: var(--danger); }
@@ -507,7 +516,8 @@
   /* The controls without a ring of their own above take the accent's, rather
      than the browser's, so every ring is one the palette checks in both
      schemes. */
-  :is(.logout-btn, .gate-btn, .setup-back, .setup-skip, .prov-aside, #prov-cancel, #prov-clear, .waiting-notice button, .prov-waiting button, .settings-link):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :is(.logout-btn, .gate-btn, .setup-back, .setup-skip, .prov-aside, #prov-clear, .waiting-notice button, .prov-waiting button, .settings-link, .settings-close):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .settings-tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
 
   @media (max-width: 760px) {
     /* Fingers rather than a pointer: every control at least 44px each way, and
@@ -515,11 +525,11 @@
        the sheet, so it wins over the rules each control is styled by above. */
     .ent, .ep-alike li a { display: flex; align-items: center; min-height: 44px; }
     .add-btn, .logout-btn, select, .search input, .ep-same, .me-btn, .ep-undo, .open, .del-btn,
-    .same-as select, .same-as input, .same-as-row button, .prov-aside, #prov-cancel, #prov-clear,
+    .same-as select, .same-as input, .same-as-row button, .prov-aside, #prov-clear, .settings-tabs button,
     .prov-waiting button, .waiting-notice button, .gate-btn, .gate-pw input, .setup-step input,
     .setup-step select, .setup-back, .setup-skip { min-height: 44px; }
     .ep-facts a { display: inline-flex; align-items: center; min-height: 44px; }
-    .icon-btn, .p-close { min-width: 44px; min-height: 44px; justify-content: center; }
+    .icon-btn, .p-close, .settings-close { min-width: 44px; min-height: 44px; justify-content: center; }
     select, .search input, .same-as select, .same-as input, .gate-pw input, .setup-step input, .setup-step select { font-size: 16px; }
   }
 </style>
@@ -728,11 +738,19 @@
 
 <!-- Settings: the Provider that reads the user's Documents, chosen here
      rather than in the environment, the languages they read them in, and the
-     user's password. -->
+     ways the user signs in — one tab each. -->
 <dialog class="same-as settings" id="settings" aria-labelledby="settings-title">
-  <form id="settings-form">
+  <div class="settings-head">
     <h2 id="settings-title">Settings</h2>
-    <h3>Provider</h3>
+    <button type="button" class="settings-close" id="settings-close" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="settings-tabs" id="settings-tabs" role="tablist" aria-labelledby="settings-title">
+    <button type="button" role="tab" id="settings-tab-provider" aria-controls="settings-provider" aria-selected="true">Provider</button>
+    <button type="button" role="tab" id="settings-tab-languages" aria-controls="settings-languages" aria-selected="false" tabindex="-1">Reading languages</button>
+    <button type="button" role="tab" id="settings-tab-signin" aria-controls="settings-signin" aria-selected="false" tabindex="-1">Sign-in</button>
+  </div>
+  <div role="tabpanel" id="settings-provider" aria-labelledby="settings-tab-provider">
+  <form id="settings-form">
     <p>The model that reads your Documents, at a server speaking the OpenAI-compatible API. Changing it reads nothing again: Documents already read keep the reading they have.</p>
     <label for="prov-url">Address</label>
     <input id="prov-url" type="url" placeholder="https://openrouter.ai/api/v1" autocomplete="off" spellcheck="false" required>
@@ -751,12 +769,12 @@
     <div class="prov-waiting" id="prov-waiting" hidden></div>
     <div class="same-as-row">
       <button type="button" id="prov-clear" hidden>Clear Provider</button>
-      <button type="button" id="prov-cancel">Close</button>
       <button type="submit" id="prov-save">Save</button>
     </div>
   </form>
+  </div>
+  <div role="tabpanel" id="settings-languages" aria-labelledby="settings-tab-languages" hidden>
   <form id="lang-form">
-    <h3>Reading languages</h3>
     <p>Up to four, in order of preference. Each Document read from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them reads nothing again.</p>
     <label for="lang-1">First</label>
     <select id="lang-1" class="lang-pick" required></select>
@@ -771,6 +789,8 @@
       <button type="submit" id="lang-save">Save languages</button>
     </div>
   </form>
+  </div>
+  <div role="tabpanel" id="settings-signin" aria-labelledby="settings-tab-signin" hidden>
   <form id="pw-form">
     <h3>Password</h3>
     <p id="pw-intro"></p>
@@ -788,10 +808,11 @@
     <h3>Passkey</h3>
     <p id="passkey-intro">Sign in with this device's passkey instead of typing your password.</p>
     <div class="same-as-status" id="passkey-status" role="status"></div>
-    <div class="same-as-row">
+    <div class="same-as-row" id="passkey-row">
       <button type="submit" id="passkey-add">Add a passkey</button>
     </div>
   </form>
+  </div>
 </dialog>
 
 <div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="p-title">

@@ -3,7 +3,7 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import { listedEntities } from "./src/browse.ts";
-import { wrapFocus } from "./src/focus.ts";
+import { tabFor, wrapFocus } from "./src/focus.ts";
 import { type Html, type HtmlValue, html, join, setHtml } from "./src/html.ts";
 import {
   languageName,
@@ -1715,7 +1715,7 @@ window.addEventListener("drop", (e) => {
 // panel does, which is why it carries its own class.
 view.addEventListener("click", (e) => {
   if (!(e.target instanceof Element)) return;
-  if (e.target.closest(".settings-link")) openSettings();
+  if (e.target.closest(".settings-link")) openSettings("provider");
   else if (e.target.closest(".read-waiting")) readWaiting();
   else if (e.target.closest(".state-empty")) fileInput.click();
 });
@@ -1774,21 +1774,58 @@ function fillWaiting() {
   );
 }
 
-function openSettings() {
+// One tab per part of Settings. Every form stays in the page while hidden, so
+// what was typed in one survives a look at another; only opening Settings
+// draws them afresh.
+const settingsTabs = [
+  ...settings.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+];
+
+/** The parts of Settings, each named by its tab. */
+type SettingsTab = "provider" | "languages" | "signin";
+
+function showSettingsTab(tab: HTMLButtonElement) {
+  for (const t of settingsTabs) {
+    const on = t === tab;
+    t.setAttribute("aria-selected", String(on));
+    t.tabIndex = on ? 0 : -1;
+    el(t.getAttribute("aria-controls") ?? "").hidden = !on;
+  }
+}
+
+function openSettings(tab: SettingsTab = "provider") {
   fillSettings();
   fillLanguages();
   fillPassword();
   fillPasskey();
+  const shown = el<HTMLButtonElement>(`settings-tab-${tab}`);
+  showSettingsTab(shown);
   settings.showModal();
+  // On the tab rather than its first field, so a phone opens no keyboard.
+  shown.focus();
 }
 
-settingsBtn.addEventListener("click", openSettings);
+el("settings-tabs").addEventListener("click", (e) => {
+  const tab = (e.target as Element).closest<HTMLButtonElement>('[role="tab"]');
+  if (tab) showSettingsTab(tab);
+});
+el("settings-tabs").addEventListener("keydown", (e) => {
+  const at = settingsTabs.indexOf(document.activeElement as HTMLButtonElement);
+  const to = tabFor(e.key, settingsTabs.length, at);
+  const tab = to === null ? undefined : settingsTabs[to];
+  if (!tab) return;
+  e.preventDefault();
+  showSettingsTab(tab);
+  tab.focus();
+});
+
+settingsBtn.addEventListener("click", () => openSettings());
 // Closed first, so the dialog hands focus back to the "⋯" button when it closes.
 el("more-settings").addEventListener("click", () => {
   closeMoreMenu();
   openSettings();
 });
-el("prov-cancel").addEventListener("click", () => settings.close());
+el("settings-close").addEventListener("click", () => settings.close());
 
 provKeyRemove.addEventListener("click", () => {
   removeKey = true;
@@ -2058,6 +2095,7 @@ el("pw-form").addEventListener("submit", async (e) => {
 const passkeyForm = el<HTMLFormElement>("passkey-form");
 const passkeyStatus = el("passkey-status");
 const passkeyAdd = el<HTMLButtonElement>("passkey-add");
+const passkeyRow = el("passkey-row");
 const passkeyIntro = el("passkey-intro");
 
 function setPasskeyStatus(msg: string, isErr = false) {
@@ -2070,7 +2108,12 @@ function fillPasskey() {
   // already says so. Where it has them but the server isn't told its address,
   // say what's missing rather than offer a prompt that would fail.
   passkeyForm.hidden = !browserHasPasskeys();
-  passkeyAdd.hidden = !passkeysWork();
+  // With nothing to press there is nothing to report either, so the button's
+  // row and the status line go too, leaving no gap under the intro.
+  const works = passkeysWork();
+  passkeyAdd.hidden = !works;
+  passkeyStatus.hidden = !works;
+  passkeyRow.hidden = !works;
   passkeyIntro.textContent = passkeysOffered
     ? "Sign in with this device's passkey instead of typing your password."
     : "Passkeys need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://docs.example.com) and restart it.";
