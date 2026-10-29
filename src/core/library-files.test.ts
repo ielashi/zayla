@@ -330,6 +330,62 @@ test("a user's file is YAML a person can read, with only a hash of the password"
   expect(user.sessions[0]).toHaveProperty("expires_at");
 });
 
+test("a Provider saved before OpenRouter was its own kind reads as OpenRouter with Zero retention at its address, and as Custom elsewhere", async () => {
+  let lib = openLibrary(TMP, { writer: "test" });
+  const ada = createUser(lib, "ada", null);
+  const ben = createUser(lib, "ben", null);
+  closeLibrary(lib);
+  const older = (baseUrl: string) =>
+    `username: x\ncreated_at: "2026-01-02T03:04:05.000Z"\nprovider:\n  base_url: ${baseUrl}\n  model: qwen/x\n  api_key: sk-test\n  chosen_at: "2026-01-02T03:04:05.000Z"\n`;
+  await Bun.write(
+    `${TMP}/users/${ada.id}.yaml`,
+    older("https://openrouter.ai/api/v1"),
+  );
+  await Bun.write(
+    `${TMP}/users/${ben.id}.yaml`,
+    older("http://127.0.0.1:8001/v1"),
+  );
+
+  lib = openLibrary(TMP, { writer: "test" });
+  try {
+    expect(savedProvider(lib, ada.id)).toMatchObject({
+      kind: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      model: "qwen/x",
+      apiKey: "sk-test",
+      zeroRetention: true,
+    });
+    expect(savedProvider(lib, ben.id)).toMatchObject({
+      kind: "custom",
+      baseUrl: "http://127.0.0.1:8001/v1",
+      zeroRetention: false,
+    });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("Zero retention turned off stays off after reopening", () => {
+  let lib = openLibrary(TMP, { writer: "test" });
+  try {
+    const owner = createUser(lib, "owner", null);
+    saveProvider(lib, owner.id, {
+      kind: "openrouter",
+      model: "qwen/x",
+      zeroRetention: false,
+    });
+
+    lib = reopen(lib);
+
+    expect(savedProvider(lib, owner.id)).toMatchObject({
+      kind: "openrouter",
+      zeroRetention: false,
+    });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
 test("nothing creates library.db", async () => {
   const lib = openLibrary(TMP, { writer: "test" });
   try {

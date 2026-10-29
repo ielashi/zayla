@@ -809,6 +809,89 @@ test("a server that reports no cost leaves it unknown", async () => {
   }
 });
 
+// ---- OpenRouter and Zero retention -----------------------------------------
+
+/**
+ * Run with OpenRouter's address pointing at a stand-in, so an OpenRouter
+ * Provider can be chosen and read with, all without leaving this machine.
+ */
+async function atStandInOpenRouter<T>(
+  baseUrl: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const before = process.env.OPENROUTER_BASE_URL;
+  process.env.OPENROUTER_BASE_URL = baseUrl;
+  try {
+    return await run();
+  } finally {
+    if (before === undefined) delete process.env.OPENROUTER_BASE_URL;
+    else process.env.OPENROUTER_BASE_URL = before;
+  }
+}
+
+test("an OpenRouter Provider asks for Zero retention unless its user turned it off", async () => {
+  const { baseUrl, seen, server } = fakeEndpoint(COMPLETION);
+  const lib = openLibrary(TMP);
+  try {
+    await atStandInOpenRouter(baseUrl, async () => {
+      const owner = userOf(lib);
+      const doc = await storedFile("scan.png", "image/png", "PNGDATA");
+
+      saveProvider(lib, owner, { kind: "openrouter", model: "qwen/x" });
+      await getProvider(savedProvider(lib, owner)).enrich(doc);
+      saveProvider(lib, owner, {
+        kind: "openrouter",
+        model: "qwen/x",
+        zeroRetention: false,
+      });
+      await getProvider(savedProvider(lib, owner)).enrich(doc);
+    });
+
+    expect(seen[0]?.body.provider).toEqual({ zdr: true });
+    expect(seen[1]?.body).not.toHaveProperty("provider");
+  } finally {
+    closeLibrary(lib);
+    server.stop(true);
+  }
+});
+
+test("a model no Zero retention host will read says so, and isn't sent anywhere else", async () => {
+  let requests = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      requests++;
+      return Response.json(
+        { error: { message: "No endpoints found matching your data policy" } },
+        { status: 404 },
+      );
+    },
+  });
+  const lib = openLibrary(TMP);
+  try {
+    const failure = await atStandInOpenRouter(
+      `http://127.0.0.1:${server.port}/api/v1`,
+      async () => {
+        const owner = userOf(lib);
+        saveProvider(lib, owner, { kind: "openrouter", model: "kept/logs" });
+        const doc = await storedFile("scan.png", "image/png", "PNGDATA");
+        return getProvider(savedProvider(lib, owner))
+          .enrich(doc)
+          .catch((err: Error) => err);
+      },
+    );
+
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toContain(
+      "no host keeps Zero retention for kept/logs",
+    );
+    expect(requests).toBe(1);
+  } finally {
+    closeLibrary(lib);
+    server.stop(true);
+  }
+});
+
 // ---- Reading languages ----------------------------------------------------
 
 /** A provider whose reading wrote exactly these titles and summaries. */

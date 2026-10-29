@@ -1726,9 +1726,61 @@ view.addEventListener("click", (e) => {
 // makes no model call and reads nothing, so the Documents already waiting are
 // offered as a separate, explicit step.
 
+// Settings and Setup share the OpenRouter/Custom choice: OpenRouter takes no
+// address and offers Zero retention; Custom takes an address and offers none.
+// Each form's ids share a prefix, "prov" or "setup-prov".
+
+type ProviderKind = ApiProvider["kind"];
+
+/** Which kind a Provider form has chosen. */
+function chosenKind(prefix: string): ProviderKind {
+  const on = document.querySelector<HTMLInputElement>(
+    `input[name="${prefix}-kind"]:checked`,
+  );
+  return on?.value === "custom" ? "custom" : "openrouter";
+}
+
+/**
+ * Show the fields this kind asks for. The address is disabled while hidden,
+ * so its `required` doesn't stop an OpenRouter form being sent.
+ */
+function showKind(prefix: string, kind: ProviderKind) {
+  for (const radio of document.querySelectorAll<HTMLInputElement>(
+    `input[name="${prefix}-kind"]`,
+  ))
+    radio.checked = radio.value === kind;
+  el(`${prefix}-custom`).hidden = kind !== "custom";
+  el<HTMLInputElement>(`${prefix}-url`).disabled = kind !== "custom";
+  el(`${prefix}-openrouter`).hidden = kind !== "openrouter";
+}
+
+/**
+ * Where a Provider form sends its Documents, as the server reads it both to
+ * list models and to choose a Provider: OpenRouter with its Zero retention,
+ * or Custom at its address.
+ */
+function destinationOf(prefix: string) {
+  return chosenKind(prefix) === "openrouter"
+    ? {
+        kind: "openrouter" as const,
+        zeroRetention: el<HTMLInputElement>(`${prefix}-zr`).checked,
+      }
+    : {
+        kind: "custom" as const,
+        baseUrl: el<HTMLInputElement>(`${prefix}-url`).value.trim(),
+      };
+}
+
+/** The key field's hint where no key is held for the destination. */
+const noKeyHint = (kind: ProviderKind) =>
+  kind === "openrouter"
+    ? "Your OpenRouter key"
+    : "None (a local server usually needs none)";
+
 const settings = el<HTMLDialogElement>("settings");
 const settingsBtn = el<HTMLButtonElement>("settings-btn");
 const provUrl = el<HTMLInputElement>("prov-url");
+const provZr = el<HTMLInputElement>("prov-zr");
 const provKey = el<HTMLInputElement>("prov-key");
 const provKeyRemove = el<HTMLButtonElement>("prov-key-remove");
 const provModel = el<HTMLInputElement>("prov-model");
@@ -1750,14 +1802,14 @@ function setProvStatus(msg: string, isErr = false) {
 /** Draw the form from the Provider the Library holds. */
 function fillSettings() {
   const p = state.provider;
-  provUrl.value = p?.baseUrl ?? "";
+  // A user who has chosen nothing yet is offered OpenRouter, Zero retention on.
+  showKind("prov", p?.kind ?? "openrouter");
+  provUrl.value = p?.kind === "custom" ? p.baseUrl : "";
+  provZr.checked = p?.kind === "openrouter" ? p.zeroRetention : true;
   provModel.value = p?.model ?? "";
   provKey.value = "";
   removeKey = false;
-  provKey.placeholder = p?.hasKey
-    ? "A key is set — type to replace it"
-    : "None (a local server usually needs none)";
-  provKeyRemove.hidden = !p?.hasKey;
+  showKeyHint();
   provClear.hidden = !p;
   provModels.replaceChildren();
   setProvStatus("");
@@ -1837,16 +1889,46 @@ provKey.addEventListener("input", () => {
   if (provKey.value) removeKey = false;
 });
 
-// The held key belongs to the address it was given for, and the server will
-// not carry it to another one — so say so as soon as the address changes.
-provUrl.addEventListener("input", () => {
+/** Whether the key held is for where the form now sends Documents. */
+function heldKeyApplies(): boolean {
   const p = state.provider;
-  if (!p?.hasKey || removeKey) return;
-  const moved = provUrl.value.trim() !== p.baseUrl;
-  provKey.placeholder = moved
-    ? "The key held is for the old address — enter one if this address needs it"
-    : "A key is set — type to replace it";
-  provKeyRemove.hidden = moved;
+  if (!p?.hasKey) return false;
+  return chosenKind("prov") === "openrouter"
+    ? p.kind === "openrouter"
+    : p.kind === "custom" && provUrl.value.trim() === p.baseUrl;
+}
+
+// The held key belongs to the address it was given for, and the server will
+// not carry it to another one — so say so as soon as the destination changes.
+function showKeyHint() {
+  if (removeKey) return;
+  const kind = chosenKind("prov");
+  const applies = heldKeyApplies();
+  provKey.placeholder = applies
+    ? "A key is set — type to replace it"
+    : !state.provider?.hasKey
+      ? noKeyHint(kind)
+      : kind === "openrouter"
+        ? "The key held is for your Custom address — enter your OpenRouter key"
+        : "The key held is for the old address — enter one if this address needs it";
+  provKeyRemove.hidden = !applies;
+}
+
+provUrl.addEventListener("input", showKeyHint);
+
+// Another kind, or Zero retention turned on or off, offers other models: the
+// ones listed before are dropped rather than offered for the wrong place.
+el("settings-form")
+  .querySelector(".prov-kind")
+  ?.addEventListener("change", () => {
+    showKind("prov", chosenKind("prov"));
+    provModels.replaceChildren();
+    setProvStatus("");
+    showKeyHint();
+  });
+provZr.addEventListener("change", () => {
+  provModels.replaceChildren();
+  setProvStatus("");
 });
 
 /** Offer these models as a model field's suggestions; returns what to say about them. */
@@ -1866,8 +1948,8 @@ function offerModels(list: HTMLDataListElement, models: string[]): string {
 // Ask the address which models it offers. A typed key is used; without one,
 // the server uses the key it holds for that same address, if any.
 provFind.addEventListener("click", async () => {
-  const baseUrl = provUrl.value.trim();
-  if (!baseUrl) {
+  const destination = destinationOf("prov");
+  if (destination.kind === "custom" && !destination.baseUrl) {
     setProvStatus("Enter the address first.", true);
     return;
   }
@@ -1877,7 +1959,10 @@ provFind.addEventListener("click", async () => {
     const res = await fetch("/api/provider/models", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baseUrl, apiKey: provKey.value || undefined }),
+      body: JSON.stringify({
+        ...destination,
+        apiKey: provKey.value || undefined,
+      }),
     });
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const { models } = (await res.json()) as { models: string[] };
@@ -1902,7 +1987,7 @@ el("settings-form").addEventListener("submit", async (e) => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        baseUrl: provUrl.value,
+        ...destinationOf("prov"),
         model: provModel.value,
         // Left out keeps the key held for this address; null removes it.
         apiKey: provKey.value ? provKey.value : removeKey ? null : undefined,
@@ -2306,7 +2391,6 @@ const setupPwAgain = el<HTMLInputElement>("setup-pw-again");
 const setupLangPicks = [1, 2, 3, 4].map((n) =>
   el<HTMLSelectElement>(`setup-lang-${n}`),
 );
-const setupProvUrl = el<HTMLInputElement>("setup-prov-url");
 const setupProvKey = el<HTMLInputElement>("setup-prov-key");
 const setupProvModel = el<HTMLInputElement>("setup-prov-model");
 const setupProvModels = el<HTMLDataListElement>("setup-prov-models");
@@ -2399,9 +2483,22 @@ setupSteps[2]?.addEventListener("submit", (e) => {
   showStep(3);
 });
 
+showKind("setup-prov", "openrouter");
+setupSteps[3]?.querySelector(".prov-kind")?.addEventListener("change", () => {
+  const kind = chosenKind("setup-prov");
+  showKind("setup-prov", kind);
+  setupProvKey.placeholder = noKeyHint(kind);
+  setupProvModels.replaceChildren();
+  setSetupStatus("");
+});
+el("setup-prov-zr").addEventListener("change", () => {
+  setupProvModels.replaceChildren();
+  setSetupStatus("");
+});
+
 setupProvFind.addEventListener("click", async () => {
-  const baseUrl = setupProvUrl.value.trim();
-  if (!baseUrl) {
+  const destination = destinationOf("setup-prov");
+  if (destination.kind === "custom" && !destination.baseUrl) {
     setSetupStatus("Enter the address first.", true);
     return;
   }
@@ -2413,7 +2510,7 @@ setupProvFind.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         code: acceptedCode,
-        baseUrl,
+        ...destination,
         apiKey: setupProvKey.value || undefined,
       }),
     });
@@ -2433,7 +2530,9 @@ setupProvFind.addEventListener("click", async () => {
 
 /** Create the owner with everything chosen, and sign them in. */
 async function finishSetup(
-  provider: { baseUrl: string; model: string; apiKey?: string } | null,
+  provider:
+    | (ReturnType<typeof destinationOf> & { model: string; apiKey?: string })
+    | null,
 ) {
   const form = setupSteps[3];
   if (form) setBusy(form, true);
@@ -2471,7 +2570,7 @@ async function finishSetup(
 setupSteps[3]?.addEventListener("submit", (e) => {
   e.preventDefault();
   finishSetup({
-    baseUrl: setupProvUrl.value,
+    ...destinationOf("setup-prov"),
     model: setupProvModel.value,
     apiKey: setupProvKey.value || undefined,
   });

@@ -13,7 +13,7 @@ import {
   type UserRecord,
 } from "./auth.ts";
 import type { Library } from "./db.ts";
-import type { ProviderChoice } from "./enrich.ts";
+import { type ProviderChoice, resolveChoice } from "./enrich.ts";
 
 /** Crockford's base32: no I, L, O or U, so nothing in a log is misread. */
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -80,9 +80,7 @@ export async function completeSetup(
     passwordHash: hash,
     readingLanguages: choices.readingLanguages,
     provider: provider && {
-      baseUrl: provider.baseUrl,
-      model: provider.model,
-      apiKey: provider.apiKey || null,
+      ...resolveChoice(provider),
       chosenAt: new Date().toISOString(),
     },
   });

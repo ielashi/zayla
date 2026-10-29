@@ -205,8 +205,12 @@ export type ApiUnmergeOutcome = {
  * the wire: the browser is told only whether one is held.
  */
 export type ApiProvider = {
+  /** OpenRouter, at its one address, or Custom, at the address the user gave. */
+  kind: "openrouter" | "custom";
   baseUrl: string;
   model: string;
   hasKey: boolean;
+  /** Zero retention; always false for a Custom Provider, which has none to offer. */
+  zeroRetention: boolean;
   chosenAt: string;
 };

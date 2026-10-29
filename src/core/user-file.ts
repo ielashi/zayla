@@ -19,6 +19,7 @@ import { DEFAULT_READING_LANGUAGES } from "../languages.ts";
 import type { CredentialRecord } from "./auth.ts";
 import type { SavedProvider } from "./enrich.ts";
 import { userFilePath, usersDir } from "./library.ts";
+import { isOpenRouterAddress } from "./openrouter.ts";
 import { readYamlFileSync, writeYamlFileSync } from "./yaml.ts";
 
 /** One signed-in session: the token the cookie carries, and when it lapses. */
@@ -67,9 +68,13 @@ type UserFile = {
   reading_languages: string[];
   me: { person: number; marked_at: string } | null;
   provider: {
+    /** Absent from files written before OpenRouter was its own kind. */
+    kind?: "openrouter" | "custom";
     base_url: string;
     model: string;
     api_key?: string | null;
+    /** OpenRouter only; absent reads as on. */
+    zero_retention?: boolean;
     chosen_at: string;
   } | null;
   passkeys: PasskeyFile[];
@@ -100,9 +105,13 @@ function toFile(user: UserState): Partial<UserFile> {
     file.me = { person: user.me.entityId, marked_at: user.me.markedAt };
   if (user.provider)
     file.provider = {
+      kind: user.provider.kind,
       base_url: user.provider.baseUrl,
       model: user.provider.model,
       api_key: user.provider.apiKey,
+      ...(user.provider.kind === "openrouter"
+        ? { zero_retention: user.provider.zeroRetention }
+        : {}),
       chosen_at: user.provider.chosenAt,
     };
   file.passkeys = user.passkeys.map((p) => ({
@@ -123,6 +132,24 @@ function toFile(user: UserState): Partial<UserFile> {
   return file;
 }
 
+/**
+ * A Provider as its file has it. A file from before OpenRouter was its own
+ * kind names only an address: one at OpenRouter's is an OpenRouter Provider,
+ * with Zero retention on like any newly chosen, and any other is Custom.
+ */
+function providerFromFile(p: NonNullable<UserFile["provider"]>): SavedProvider {
+  const kind =
+    p.kind ?? (isOpenRouterAddress(p.base_url) ? "openrouter" : "custom");
+  return {
+    kind,
+    baseUrl: p.base_url,
+    model: p.model,
+    apiKey: p.api_key ?? null,
+    zeroRetention: kind === "openrouter" && p.zero_retention !== false,
+    chosenAt: p.chosen_at,
+  };
+}
+
 function fromFile(id: string, file: UserFile): UserState {
   const languages = Array.isArray(file.reading_languages)
     ? file.reading_languages.map(String)
@@ -138,14 +165,7 @@ function fromFile(id: string, file: UserFile): UserState {
     me: file.me
       ? { entityId: file.me.person, markedAt: file.me.marked_at }
       : null,
-    provider: file.provider
-      ? {
-          baseUrl: file.provider.base_url,
-          model: file.provider.model,
-          apiKey: file.provider.api_key ?? null,
-          chosenAt: file.provider.chosen_at,
-        }
-      : null,
+    provider: file.provider ? providerFromFile(file.provider) : null,
     passkeys: (file.passkeys ?? []).map((p) => ({
       id: p.id,
       userId: id,

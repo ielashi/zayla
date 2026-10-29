@@ -4,9 +4,9 @@ import { basename, join } from "node:path";
 import index from "../index.html";
 import { authRoutes } from "./api/auth.ts";
 import {
-  addressAndModel,
-  httpAddress,
+  listingFrom,
   modelsAt,
+  namedProvider,
   noAddressToList,
 } from "./api/provider-form.ts";
 import { setupRoutes } from "./api/setup.ts";
@@ -85,9 +85,11 @@ function apiProviderOf(lib: Library, userId: string): ApiProvider | null {
   const p = savedProvider(lib, userId);
   return p
     ? {
+        kind: p.kind,
         baseUrl: p.baseUrl,
         model: p.model,
         hasKey: p.apiKey !== null,
+        zeroRetention: p.zeroRetention,
         chosenAt: p.chosenAt,
       }
     : null;
@@ -514,20 +516,21 @@ export function startServer(port: number, lib: Library) {
           const user = requireAuth(lib, req);
           if (!user) return unauthorized();
           const body = (await req.json().catch(() => null)) as {
+            kind?: unknown;
             baseUrl?: unknown;
             model?: unknown;
             apiKey?: unknown;
+            zeroRetention?: unknown;
           } | null;
-          const named = addressAndModel(body);
+          const named = namedProvider(body);
           if ("error" in named)
             return Response.json({ error: named.error }, { status: 400 });
-          const { baseUrl, model } = named;
           let apiKey: string | null;
           if (body?.apiKey === undefined)
-            apiKey = keyFor(lib, user.id, baseUrl);
+            apiKey = keyFor(lib, user.id, named.baseUrl);
           else if (typeof body.apiKey === "string") apiKey = body.apiKey.trim();
           else apiKey = null;
-          saveProvider(lib, user.id, { baseUrl, model, apiKey });
+          saveProvider(lib, user.id, { ...named, apiKey });
           return Response.json({ provider: apiProviderOf(lib, user.id) });
         },
         DELETE: (req) => {
@@ -574,15 +577,17 @@ export function startServer(port: number, lib: Library) {
           const user = requireAuth(lib, req);
           if (!user) return unauthorized();
           const body = (await req.json().catch(() => null)) as {
+            kind?: unknown;
             baseUrl?: unknown;
             apiKey?: unknown;
+            zeroRetention?: unknown;
           } | null;
-          const baseUrl = httpAddress(body?.baseUrl);
-          if (!baseUrl) return noAddressToList();
+          const listing = listingFrom(body);
+          if (!listing) return noAddressToList();
           const apiKey =
             (typeof body?.apiKey === "string" ? body.apiKey.trim() : "") ||
-            keyFor(lib, user.id, baseUrl);
-          return modelsAt(baseUrl, apiKey);
+            keyFor(lib, user.id, listing.baseUrl);
+          return modelsAt(listing, apiKey);
         },
       },
 
