@@ -16,10 +16,11 @@
 import { mkdirSync, readdirSync, rmSync } from "node:fs";
 import type { AuthenticatorTransportFuture } from "@simplewebauthn/server";
 import { DEFAULT_READING_LANGUAGES } from "../languages.ts";
+import type { ProviderKind } from "../shared.ts";
 import type { CredentialRecord } from "./auth.ts";
 import type { SavedProvider } from "./enrich.ts";
 import { userFilePath, usersDir } from "./library.ts";
-import { isOpenRouterAddress } from "./openrouter.ts";
+import { isOpenRouterAddress, openRouterAddress } from "./openrouter.ts";
 import { readYamlFileSync, writeYamlFileSync } from "./yaml.ts";
 
 /** One signed-in session: the token the cookie carries, and when it lapses. */
@@ -69,7 +70,7 @@ type UserFile = {
   me: { person: number; marked_at: string } | null;
   provider: {
     /** Absent from files written before OpenRouter was its own kind. */
-    kind?: "openrouter" | "custom";
+    kind?: ProviderKind;
     base_url: string;
     model: string;
     api_key?: string | null;
@@ -135,14 +136,16 @@ function toFile(user: UserState): Partial<UserFile> {
 /**
  * A Provider as its file has it. A file from before OpenRouter was its own
  * kind names only an address: one at OpenRouter's is an OpenRouter Provider,
- * with Zero retention on like any newly chosen, and any other is Custom.
+ * with Zero retention on like any newly chosen, and any other is Custom. An
+ * OpenRouter Provider is at OpenRouter's one address however its file spelled
+ * it, so the key held for it still goes there.
  */
 function providerFromFile(p: NonNullable<UserFile["provider"]>): SavedProvider {
   const kind =
     p.kind ?? (isOpenRouterAddress(p.base_url) ? "openrouter" : "custom");
   return {
     kind,
-    baseUrl: p.base_url,
+    baseUrl: kind === "openrouter" ? openRouterAddress() : p.base_url,
     model: p.model,
     apiKey: p.api_key ?? null,
     zeroRetention: kind === "openrouter" && p.zero_retention !== false,

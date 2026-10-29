@@ -17,10 +17,10 @@ import type { ProviderChoice } from "../core/enrich.ts";
 import { completeSetup, isSetupCode, SetupClosed } from "../core/setup.ts";
 import { readingLanguagesFrom } from "../languages.ts";
 import {
-  listingFrom,
+  destinationFrom,
   modelsAt,
   namedProvider,
-  noAddressToList,
+  noModelsListed,
 } from "./provider-form.ts";
 
 /** The answer every Setup route gives once the Library has a user. */
@@ -90,11 +90,11 @@ export function setupRoutes(lib: Library, code: string | null) {
         const body = await bodyOf(req);
         const refused = refuseSetup(lib, code, body.code);
         if (refused) return refused;
-        const listing = listingFrom(body);
-        if (!listing) return noAddressToList();
+        const destination = destinationFrom(body);
+        if ("error" in destination) return noModelsListed(destination.error);
         const apiKey =
           typeof body.apiKey === "string" ? body.apiKey.trim() || null : null;
-        return modelsAt(listing, apiKey);
+        return modelsAt(destination, apiKey);
       },
     },
 

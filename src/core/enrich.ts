@@ -1,5 +1,5 @@
 import { DEFAULT_READING_LANGUAGES, languageName } from "../languages.ts";
-import type { Deadline, Party } from "../shared.ts";
+import type { Deadline, Party, ProviderKind } from "../shared.ts";
 import { updateUser } from "./auth.ts";
 import type { Library } from "./db.ts";
 import { type DocumentRecord, getDocument, updateEnrichment } from "./db.ts";
@@ -389,8 +389,7 @@ function textsOf(
 
 /** A user's Provider as stored: where their Documents go, which model reads them, and the key. */
 export type SavedProvider = {
-  /** OpenRouter, at its one address, or Custom, at the address the user gave. */
-  kind: "openrouter" | "custom";
+  kind: ProviderKind;
   /** The endpoint, up to and including `/v1`. */
   baseUrl: string;
   /** The model id, as the endpoint names it. */
@@ -479,11 +478,26 @@ export function clearProvider(lib: Library, userId: string): void {
  * the address does not answer with a list, so an unreachable server is not
  * mistaken for one that offers nothing.
  */
-export async function listModels(
+export const listModels = (baseUrl: string, apiKey?: string | null) =>
+  modelIdsAt(baseUrl, "/models", "id", apiKey);
+
+/**
+ * The model ids OpenRouter can read with Zero retention, sorted: those with at
+ * least one host on its `GET /endpoints/zdr`, which lists each host apart.
+ */
+export const listZeroRetentionModels = (
   baseUrl: string,
   apiKey?: string | null,
+) => modelIdsAt(baseUrl, "/endpoints/zdr", "model_id", apiKey);
+
+/** The model ids in the `data` list an address answers `path` with, each once, sorted. */
+async function modelIdsAt(
+  baseUrl: string,
+  path: string,
+  field: "id" | "model_id",
+  apiKey?: string | null,
 ): Promise<string[]> {
-  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
+  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
     headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
   });
   if (!res.ok) throw new Error(`${baseUrl} answered ${res.status}`);
@@ -492,31 +506,8 @@ export async function listModels(
   } | null;
   if (!Array.isArray(body?.data))
     throw new Error(`${baseUrl} did not answer with a list of models`);
-  return (body.data as { id?: unknown }[])
-    .map((m) => m.id)
-    .filter((id): id is string => typeof id === "string" && id !== "")
-    .sort();
-}
-
-/**
- * The model ids OpenRouter can read with Zero retention, sorted: those with at
- * least one host on its `GET /endpoints/zdr`, which lists each host apart.
- */
-export async function listZeroRetentionModels(
-  baseUrl: string,
-  apiKey?: string | null,
-): Promise<string[]> {
-  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/endpoints/zdr`, {
-    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
-  });
-  if (!res.ok) throw new Error(`${baseUrl} answered ${res.status}`);
-  const body = (await res.json().catch(() => null)) as {
-    data?: unknown;
-  } | null;
-  if (!Array.isArray(body?.data))
-    throw new Error(`${baseUrl} did not answer with a list of endpoints`);
-  const ids = (body.data as { model_id?: unknown }[])
-    .map((e) => e.model_id)
+  const ids = (body.data as Record<string, unknown>[])
+    .map((entry) => entry[field])
     .filter((id): id is string => typeof id === "string" && id !== "");
   return [...new Set(ids)].sort();
 }

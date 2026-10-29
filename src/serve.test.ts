@@ -2105,6 +2105,29 @@ test("OpenRouter's models are those with a Zero retention host, unless it is tur
   }
 });
 
+test("models aren't listed for a Custom Provider at OpenRouter's address", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+
+    const res = await fetch(`${base(server)}/api/provider/models`, {
+      method: "POST",
+      headers: { cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "custom",
+        baseUrl: "https://openrouter.ai/api/v1",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain(
+      "choose OpenRouter instead",
+    );
+  } finally {
+    server.stop(true);
+  }
+});
+
 test("an address that cannot list its models says so, rather than offering none", async () => {
   const server = startServer(0, library);
   try {

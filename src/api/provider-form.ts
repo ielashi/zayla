@@ -18,79 +18,66 @@ export function httpAddress(v: unknown): string | null {
   }
 }
 
-/** A Provider as a body names it, before its key: always with the address its Documents go to. */
-export type NamedProvider =
+/** A request body as these routes read it: what it says, unchecked. */
+type ProviderBody =
   | {
-      kind: "openrouter";
-      baseUrl: string;
-      model: string;
-      zeroRetention: boolean;
+      kind?: unknown;
+      baseUrl?: unknown;
+      model?: unknown;
+      zeroRetention?: unknown;
     }
-  | { kind: "custom"; baseUrl: string; model: string };
+  | null
+  | undefined;
 
 /**
- * The Provider a body names, or why it names none. A body naming no kind is
- * Custom, as every body was before OpenRouter was its own. OpenRouter takes
- * no address, and has Zero retention unless the body turns it off; Custom
- * takes any address but OpenRouter's, which is reached only by choosing it.
+ * Where a body sends Documents, both to choose a Provider and to list its
+ * models: always with the address they go to, and whether with Zero retention.
  */
-export function namedProvider(
-  body:
-    | {
-        kind?: unknown;
-        baseUrl?: unknown;
-        model?: unknown;
-        zeroRetention?: unknown;
-      }
-    | null
-    | undefined,
-): NamedProvider | { error: string } {
-  const model = typeof body?.model === "string" ? body.model.trim() : "";
-  if (body?.kind === "openrouter")
-    return model
-      ? {
-          kind: "openrouter",
-          baseUrl: openRouterAddress(),
-          model,
-          zeroRetention: body.zeroRetention !== false,
-        }
-      : { error: "an OpenRouter Provider needs a model" };
-  if (body?.kind !== undefined && body.kind !== "custom")
-    return { error: "a Provider is either OpenRouter or Custom" };
-  const baseUrl = httpAddress(body?.baseUrl);
-  if (!baseUrl || !model)
-    return { error: "a Provider needs an http(s) address and a model" };
-  if (isOpenRouterAddress(baseUrl))
-    return { error: "that is OpenRouter's address: choose OpenRouter instead" };
-  return { kind: "custom", baseUrl, model };
-}
-
-/** Where a body asks for models to be listed, and whether only those with Zero retention. */
-export type Listing = { baseUrl: string; zeroRetention: boolean };
+export type Destination =
+  | { kind: "openrouter"; baseUrl: string; zeroRetention: boolean }
+  // A Custom Provider has no Zero retention to offer.
+  | { kind: "custom"; baseUrl: string; zeroRetention: false };
 
 /**
- * Where a body asks for models to be listed: OpenRouter, keeping to Zero
- * retention unless the body turns it off, or the http(s) address it names.
- * Null when it names neither.
+ * Where a body sends Documents, or why it names nowhere. A body naming no
+ * kind is Custom, as every body was before OpenRouter was its own. OpenRouter
+ * takes no address, and has Zero retention unless the body turns it off;
+ * Custom takes any address but OpenRouter's, which is reached only by
+ * choosing it.
  */
-export function listingFrom(
-  body: { kind?: unknown; baseUrl?: unknown; zeroRetention?: unknown } | null,
-): Listing | null {
+export function destinationFrom(
+  body: ProviderBody,
+): Destination | { error: string } {
   if (body?.kind === "openrouter")
     return {
+      kind: "openrouter",
       baseUrl: openRouterAddress(),
       zeroRetention: body.zeroRetention !== false,
     };
+  if (body?.kind !== undefined && body.kind !== "custom")
+    return { error: "a Provider is either OpenRouter or Custom" };
   const baseUrl = httpAddress(body?.baseUrl);
-  return baseUrl ? { baseUrl, zeroRetention: false } : null;
+  if (!baseUrl) return { error: "a Custom Provider needs an http(s) address" };
+  if (isOpenRouterAddress(baseUrl))
+    return { error: "that is OpenRouter's address: choose OpenRouter instead" };
+  return { kind: "custom", baseUrl, zeroRetention: false };
 }
 
-/** The answer to a body that names no address to list models at. */
-export const noAddressToList = () =>
-  Response.json(
-    { error: "listing models needs OpenRouter or an http(s) address" },
-    { status: 400 },
-  );
+/** The Provider a body names, before its key, or why it names none. */
+export function namedProvider(
+  body: ProviderBody,
+): (Destination & { model: string }) | { error: string } {
+  const destination = destinationFrom(body);
+  if ("error" in destination) return destination;
+  const model = typeof body?.model === "string" ? body.model.trim() : "";
+  return model
+    ? { ...destination, model }
+    : { error: "a Provider needs a model" };
+}
+
+/** The answer to a body that names nowhere to list models. */
+export const noModelsListed = (error: string) =>
+  Response.json({ error }, { status: 400 });
 
 /**
  * The models a listing offers, as a response. An address that does not
@@ -98,7 +85,7 @@ export const noAddressToList = () =>
  * offering nothing.
  */
 export async function modelsAt(
-  { baseUrl, zeroRetention }: Listing,
+  { baseUrl, zeroRetention }: Destination,
   apiKey: string | null,
 ): Promise<Response> {
   try {

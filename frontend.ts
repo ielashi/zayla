@@ -36,6 +36,7 @@ import type {
   AppearanceRole,
   EntityKind,
   Party,
+  ProviderKind,
 } from "./src/shared.ts";
 
 /** Fetch a required static element by id, asserting it exists. */
@@ -1730,8 +1731,6 @@ view.addEventListener("click", (e) => {
 // address and offers Zero retention; Custom takes an address and offers none.
 // Each form's ids share a prefix, "prov" or "setup-prov".
 
-type ProviderKind = ApiProvider["kind"];
-
 /** Which kind a Provider form has chosen. */
 function chosenKind(prefix: string): ProviderKind {
   const on = document.querySelector<HTMLInputElement>(
@@ -1763,7 +1762,7 @@ function destinationOf(prefix: string) {
   return chosenKind(prefix) === "openrouter"
     ? {
         kind: "openrouter" as const,
-        zeroRetention: el<HTMLInputElement>(`${prefix}-zr`).checked,
+        zeroRetention: el<HTMLInputElement>(`${prefix}-zero-retention`).checked,
       }
     : {
         kind: "custom" as const,
@@ -1780,7 +1779,7 @@ const noKeyHint = (kind: ProviderKind) =>
 const settings = el<HTMLDialogElement>("settings");
 const settingsBtn = el<HTMLButtonElement>("settings-btn");
 const provUrl = el<HTMLInputElement>("prov-url");
-const provZr = el<HTMLInputElement>("prov-zr");
+const provZeroRetention = el<HTMLInputElement>("prov-zero-retention");
 const provKey = el<HTMLInputElement>("prov-key");
 const provKeyRemove = el<HTMLButtonElement>("prov-key-remove");
 const provModel = el<HTMLInputElement>("prov-model");
@@ -1805,7 +1804,7 @@ function fillSettings() {
   // A user who has chosen nothing yet is offered OpenRouter, Zero retention on.
   showKind("prov", p?.kind ?? "openrouter");
   provUrl.value = p?.kind === "custom" ? p.baseUrl : "";
-  provZr.checked = p?.kind === "openrouter" ? p.zeroRetention : true;
+  provZeroRetention.checked = p?.kind === "openrouter" ? p.zeroRetention : true;
   provModel.value = p?.model ?? "";
   provKey.value = "";
   removeKey = false;
@@ -1926,7 +1925,7 @@ el("settings-form")
     setProvStatus("");
     showKeyHint();
   });
-provZr.addEventListener("change", () => {
+provZeroRetention.addEventListener("change", () => {
   provModels.replaceChildren();
   setProvStatus("");
 });
@@ -2491,7 +2490,7 @@ setupSteps[3]?.querySelector(".prov-kind")?.addEventListener("change", () => {
   setupProvModels.replaceChildren();
   setSetupStatus("");
 });
-el("setup-prov-zr").addEventListener("change", () => {
+el("setup-prov-zero-retention").addEventListener("change", () => {
   setupProvModels.replaceChildren();
   setSetupStatus("");
 });

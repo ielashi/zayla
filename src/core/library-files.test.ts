@@ -25,7 +25,7 @@ import {
   updateEnrichment,
 } from "./db.ts";
 import type { EnrichedMetadata } from "./enrich.ts";
-import { savedProvider, saveProvider } from "./enrich.ts";
+import { keyFor, savedProvider, saveProvider } from "./enrich.ts";
 import {
   entityDetail,
   findEntities,
@@ -360,6 +360,29 @@ test("a Provider saved before OpenRouter was its own kind reads as OpenRouter wi
       baseUrl: "http://127.0.0.1:8001/v1",
       zeroRetention: false,
     });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("an older Provider at OpenRouter under another spelling keeps its key for OpenRouter's address", async () => {
+  let lib = openLibrary(TMP, { writer: "test" });
+  const owner = createUser(lib, "owner", null);
+  closeLibrary(lib);
+  await Bun.write(
+    `${TMP}/users/${owner.id}.yaml`,
+    `username: owner\ncreated_at: "2026-01-02T03:04:05.000Z"\nprovider:\n  base_url: https://www.OpenRouter.ai/api/v1/\n  model: qwen/x\n  api_key: sk-test\n  chosen_at: "2026-01-02T03:04:05.000Z"\n`,
+  );
+
+  lib = openLibrary(TMP, { writer: "test" });
+  try {
+    expect(savedProvider(lib, owner.id)).toMatchObject({
+      kind: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+    });
+    expect(keyFor(lib, owner.id, "https://openrouter.ai/api/v1")).toBe(
+      "sk-test",
+    );
   } finally {
     closeLibrary(lib);
   }

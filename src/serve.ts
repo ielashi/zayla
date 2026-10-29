@@ -4,10 +4,10 @@ import { basename, join } from "node:path";
 import index from "../index.html";
 import { authRoutes } from "./api/auth.ts";
 import {
-  listingFrom,
+  destinationFrom,
   modelsAt,
   namedProvider,
-  noAddressToList,
+  noModelsListed,
 } from "./api/provider-form.ts";
 import { setupRoutes } from "./api/setup.ts";
 import { browseView } from "./browse.ts";
@@ -582,12 +582,12 @@ export function startServer(port: number, lib: Library) {
             apiKey?: unknown;
             zeroRetention?: unknown;
           } | null;
-          const listing = listingFrom(body);
-          if (!listing) return noAddressToList();
+          const destination = destinationFrom(body);
+          if ("error" in destination) return noModelsListed(destination.error);
           const apiKey =
             (typeof body?.apiKey === "string" ? body.apiKey.trim() : "") ||
-            keyFor(lib, user.id, listing.baseUrl);
-          return modelsAt(listing, apiKey);
+            keyFor(lib, user.id, destination.baseUrl);
+          return modelsAt(destination, apiKey);
         },
       },
 
