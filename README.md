@@ -1,7 +1,9 @@
 # Zayla
 
-A tool to archive and search your documents.
-It's like Google Photos but for your documents.
+**An open-source document archive, organized by AI.**
+
+Drop in your letters, bills, legal documents, IDs and handwritten notes, and
+find any of them in seconds.
 
 ## Install with Docker
 
