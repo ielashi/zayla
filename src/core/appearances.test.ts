@@ -270,7 +270,10 @@ test("deriveAppearances: two signatories joined by 'and' are two people", () => 
 test("deriveAppearances: an ambiguous pair of organizations affiliates nobody", () => {
   const got = deriveAppearances(
     reading({
-      sender: { organization: "Stadt Porto; Region Osaka", person: "M. Schmidt" },
+      sender: {
+        organization: "Stadt Porto; Region Osaka",
+        person: "M. Schmidt",
+      },
     }),
   );
 

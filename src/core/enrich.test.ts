@@ -470,7 +470,9 @@ test("enrichDocument: a reading that arrives after the Document was Deleted lear
       next,
       providerNaming({ sender: { organization: "Stadt Porto", person: "" } }),
     );
-    expect(listEntities(lib).map((e) => e.displayName)).toEqual(["Stadt Porto"]);
+    expect(listEntities(lib).map((e) => e.displayName)).toEqual([
+      "Stadt Porto",
+    ]);
   } finally {
     closeLibrary(lib);
   }
@@ -481,7 +483,9 @@ test("enrichDocument: a reading whose document.yaml is gone writes nothing", asy
   try {
     const doc = catalogued(lib, "f".repeat(64));
     await enrichDocument(lib, doc, {
-      ...providerNaming({ sender: { organization: "Stadt Porto", person: "" } }),
+      ...providerNaming({
+        sender: { organization: "Stadt Porto", person: "" },
+      }),
       async enrich() {
         // Deleted by a Delete that got no further than its first step.
         await rm(`${TMP}/about/${doc.hash}/document.yaml`);
@@ -582,7 +586,10 @@ test("enrichDocument: a party crowding two signatories into one field yields bot
       lib,
       doc,
       providerNaming({
-        sender: { organization: "Stadt Porto", person: "M. Schmidt / A. Keller" },
+        sender: {
+          organization: "Stadt Porto",
+          person: "M. Schmidt / A. Keller",
+        },
       }),
     );
 

@@ -241,7 +241,9 @@ test("an absent party leaves no 'unknown' standing in for it", () => {
       receiver: { organization: "unknown", person: "N/A" },
     });
 
-    expect(listEntities(lib).map((e) => e.displayName)).toEqual(["Stadt Porto"]);
+    expect(listEntities(lib).map((e) => e.displayName)).toEqual([
+      "Stadt Porto",
+    ]);
   } finally {
     closeLibrary(lib);
   }

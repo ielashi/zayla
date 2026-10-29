@@ -1103,7 +1103,9 @@ test("GET /api/entities/:id groups the entity's Documents by the part it played"
       receiver: { organization: "Stadt Porto", person: "" },
     });
     const view = await browse(server, cookie);
-    const stadt = view.organizations.find((o) => o.displayName === "Stadt Porto");
+    const stadt = view.organizations.find(
+      (o) => o.displayName === "Stadt Porto",
+    );
     const okafor = view.people.find((p) => p.displayName === "Jordan Okafor");
 
     expect((await entityPage(server, cookie, stadt?.id ?? 0)).roles).toEqual([
