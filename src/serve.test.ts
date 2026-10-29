@@ -43,6 +43,7 @@ beforeEach(() => {
   library = openLibrary(TMP);
 });
 afterEach(async () => {
+  delete process.env.ZAYLA_URL;
   closeLibrary(library);
   await rm(TMP, { recursive: true, force: true });
 });

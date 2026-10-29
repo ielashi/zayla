@@ -6,7 +6,6 @@
 services:
   zayla:
     image: ghcr.io/ielashi/zayla:latest # or pin a release, e.g. :0.1
-    container_name: zayla
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -14,7 +13,7 @@ services:
       # The Library: plain files you can browse and back up. Copy this folder
       # to back it up; there is no database to dump.
       - ./library:/data
-    # The image runs as uid 1000. If the library folder belongs to someone
+    # The image runs as uid 1000. If the Library folder belongs to someone
     # else, run as its owner instead (`id -u` and `id -g` print yours):
     # user: "1001:1001"
     # Passkeys need the address you open Zayla at, behind HTTPS. Without it,

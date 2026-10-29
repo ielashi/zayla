@@ -322,9 +322,9 @@ async function main(): Promise<void> {
       const port = Number(rest[0] ?? process.env.PORT ?? 3000);
       if (!Number.isInteger(port) || port < 0 || port > 65535)
         fail(`invalid port: ${rest[0]}`);
-      let passkeys: AuthConfig | null = null;
+      let passkeyConfig: AuthConfig | null = null;
       try {
-        passkeys = authConfig();
+        passkeyConfig = authConfig();
       } catch (err) {
         fail((err as Error).message);
       }
@@ -340,8 +340,8 @@ async function main(): Promise<void> {
         });
       console.log(`serving the library at ${server.url}`);
       console.log(
-        passkeys
-          ? `passkeys for ${passkeys.rpOrigin}`
+        passkeyConfig
+          ? `passkeys for ${passkeyConfig.rpOrigin}`
           : "passkeys off: set ZAYLA_URL to the address Zayla is opened at",
       );
       console.log("Ctrl-C to stop.");
