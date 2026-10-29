@@ -50,28 +50,6 @@ and Zayla knowing the address your browser opens:
 domain or subdomain, not under `/zayla`. Once it's set, add a passkey under
 Settings.
 
-### Versions and upgrading
-
-| Tag | What it is |
-|---|---|
-| `0.1.0` | exactly that release |
-| `0.1` | the latest 0.1.x |
-| `latest` | the latest release |
-| `edge` | every change on `main`, unreleased |
-
-Until 1.0, a minor version (0.1 → 0.2) may change things. To upgrade:
-
-```sh
-docker compose pull && docker compose up -d
-```
-
-**Back up the Library folder before you upgrade.** It's plain files, so a copy
-(`cp -a library library-backup`, or your usual backup tool) is a complete
-backup. Downgrading is not supported: an older Zayla may drop what a newer one
-wrote, so to go back, restore the backup you made before upgrading. The search
-index under `library/derived/` is rebuilt from the files and needn't be backed
-up.
-
 ## License
 
 Zayla is licensed under the [GNU Affero General Public License v3.0](LICENSE).
