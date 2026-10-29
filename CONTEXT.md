@@ -50,8 +50,19 @@ The model, at an address, that a user's Documents are sent to for Enrichment.
 Each user has at most one, chosen by themselves; until one is chosen, their
 Documents are filed but wait to be read. Changing the Provider never re-reads
 anything: Documents already Enriched keep the reading they have, and say which
-model made it.
+model made it. A Provider is either OpenRouter, at its one fixed address, or
+Custom, at any other address the user gives; OpenRouter is reached only by
+choosing it, never by typing its address as a Custom one.
 _Avoid_: Reader, backend, engine, LLM, settings
+
+**Zero retention**:
+An OpenRouter Provider's promise that a Document is sent only to hosts that
+keep nothing of it once they have answered — no logs, no copy held for abuse
+review. It is part of each user's Provider, on whenever OpenRouter is chosen
+until that user turns it off. A Document that no such host will read waits
+unread rather than going anywhere else. A Custom Provider has no Zero
+retention to offer: where its Documents are kept is up to that server.
+_Avoid_: ZDR, privacy mode, no-logging, data policy
 
 **Reading language**:
 A language a user wants to read their Library in. Each user keeps up to four,

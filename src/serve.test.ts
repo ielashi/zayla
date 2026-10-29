@@ -1878,6 +1878,102 @@ test("a Provider needs an address and a model", async () => {
   }
 });
 
+test("OpenRouter is chosen by name, at its own address, with Zero retention unless turned off", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+
+    const res = await chooseProvider(server, cookie, {
+      kind: "openrouter",
+      model: "qwen/x",
+      apiKey: "sk-or",
+    });
+    expect(res.status).toBe(200);
+    expect(await providerOf(server, cookie)).toMatchObject({
+      kind: "openrouter",
+      baseUrl: "https://openrouter.ai/api/v1",
+      model: "qwen/x",
+      hasKey: true,
+      zeroRetention: true,
+    });
+
+    await chooseProvider(server, cookie, {
+      kind: "openrouter",
+      model: "qwen/x",
+      zeroRetention: false,
+    });
+    expect(await providerOf(server, cookie)).toMatchObject({
+      kind: "openrouter",
+      hasKey: true,
+      zeroRetention: false,
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("a Custom Provider has no Zero retention, and can't be pointed at OpenRouter", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+
+    await chooseProvider(server, cookie, {
+      kind: "custom",
+      baseUrl: "http://127.0.0.1:8001/v1",
+      model: "gemma",
+    });
+    expect(await providerOf(server, cookie)).toMatchObject({
+      kind: "custom",
+      zeroRetention: false,
+    });
+
+    for (const baseUrl of [
+      "https://openrouter.ai/api/v1",
+      "https://OpenRouter.ai/api/v1/",
+    ]) {
+      const res = await chooseProvider(server, cookie, {
+        kind: "custom",
+        baseUrl,
+        model: "qwen/x",
+      });
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toContain(
+        "OpenRouter",
+      );
+    }
+    expect(await providerOf(server, cookie)).toMatchObject({
+      baseUrl: "http://127.0.0.1:8001/v1",
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("switching between OpenRouter and Custom never carries a key across", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    await chooseProvider(server, cookie, {
+      kind: "custom",
+      baseUrl: "https://example.test/api/v1",
+      model: "qwen/x",
+      apiKey: "sk-custom",
+    });
+
+    await chooseProvider(server, cookie, {
+      kind: "openrouter",
+      model: "qwen/x",
+    });
+
+    expect(await providerOf(server, cookie)).toMatchObject({
+      kind: "openrouter",
+      hasKey: false,
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
 test("clearing the Provider leaves the Library with none", async () => {
   const server = startServer(0, library);
   try {
@@ -1945,6 +2041,90 @@ test("listing models at the Provider's own address uses the key it already holds
   } finally {
     server.stop(true);
     models.server.stop(true);
+  }
+});
+
+/**
+ * A stand-in for OpenRouter: it offers these models, of which only some have
+ * an endpoint that keeps nothing, listed once per host as OpenRouter lists them.
+ */
+function fakeOpenRouter(models: string[], zeroRetention: string[]) {
+  const server = Bun.serve({
+    port: 0,
+    fetch(req) {
+      const path = new URL(req.url).pathname;
+      if (path === "/api/v1/models")
+        return Response.json({ data: models.map((id) => ({ id })) });
+      if (path === "/api/v1/endpoints/zdr")
+        return Response.json({
+          data: zeroRetention.flatMap((id) => [
+            { model_id: id, provider_name: "HostA" },
+            { model_id: id, provider_name: "HostB" },
+          ]),
+        });
+      return new Response("not found", { status: 404 });
+    },
+  });
+  const before = process.env.OPENROUTER_BASE_URL;
+  process.env.OPENROUTER_BASE_URL = `http://127.0.0.1:${server.port}/api/v1`;
+  return {
+    stop() {
+      if (before === undefined) delete process.env.OPENROUTER_BASE_URL;
+      else process.env.OPENROUTER_BASE_URL = before;
+      server.stop(true);
+    },
+  };
+}
+
+test("OpenRouter's models are those with a Zero retention host, unless it is turned off", async () => {
+  const openRouter = fakeOpenRouter(
+    ["qwen/x", "gemma", "kept/logs"],
+    ["qwen/x", "gemma"],
+  );
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const list = async (body: unknown) =>
+      (
+        await fetch(`${base(server)}/api/provider/models`, {
+          method: "POST",
+          headers: { cookie, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+      ).json();
+
+    expect(await list({ kind: "openrouter" })).toEqual({
+      models: ["gemma", "qwen/x"],
+    });
+    expect(await list({ kind: "openrouter", zeroRetention: false })).toEqual({
+      models: ["gemma", "kept/logs", "qwen/x"],
+    });
+  } finally {
+    server.stop(true);
+    openRouter.stop();
+  }
+});
+
+test("models aren't listed for a Custom Provider at OpenRouter's address", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+
+    const res = await fetch(`${base(server)}/api/provider/models`, {
+      method: "POST",
+      headers: { cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "custom",
+        baseUrl: "https://openrouter.ai/api/v1",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain(
+      "choose OpenRouter instead",
+    );
+  } finally {
+    server.stop(true);
   }
 });
 
@@ -3003,6 +3183,36 @@ test("a Provider chosen in Setup reads the owner's Documents, its models listed 
   } finally {
     server.stop(true);
     models.server.stop(true);
+  }
+});
+
+test("OpenRouter chosen in Setup has Zero retention, and its models are listed with it", async () => {
+  const openRouter = fakeOpenRouter(["qwen/x", "kept/logs"], ["qwen/x"]);
+  const { server, code } = boot();
+  try {
+    const listed = await setUp(
+      server,
+      { code, kind: "openrouter" },
+      "/api/setup/models",
+    );
+    expect(await listed.json()).toEqual({ models: ["qwen/x"] });
+
+    const cookie = sessionFrom(
+      await setUp(server, {
+        ...CHOICES,
+        code,
+        provider: { kind: "openrouter", model: "qwen/x", apiKey: "sk-or" },
+      }),
+    );
+    expect(await providerOf(server, cookie)).toMatchObject({
+      kind: "openrouter",
+      model: "qwen/x",
+      hasKey: true,
+      zeroRetention: true,
+    });
+  } finally {
+    server.stop(true);
+    openRouter.stop();
   }
 });
 

@@ -1,10 +1,11 @@
 import { DEFAULT_READING_LANGUAGES, languageName } from "../languages.ts";
-import type { Deadline, Party } from "../shared.ts";
+import type { Deadline, Party, ProviderKind } from "../shared.ts";
 import { updateUser } from "./auth.ts";
 import type { Library } from "./db.ts";
 import { type DocumentRecord, getDocument, updateEnrichment } from "./db.ts";
 import { documentFileExists } from "./document-file.ts";
 import { objectPath } from "./library.ts";
+import { openRouterAddress } from "./openrouter.ts";
 import { shownText } from "./reading-languages.ts";
 import { removeTranscription, writeTranscription } from "./transcription.ts";
 
@@ -163,6 +164,8 @@ class ChatCompletionsProvider implements EnrichmentProvider {
     readonly baseUrl: string,
     readonly model: string,
     private apiKey: string | undefined,
+    /** OpenRouter's Zero retention: send only to hosts that keep nothing. */
+    private zeroRetention: boolean,
   ) {}
 
   async enrich(doc: EnrichmentInput): Promise<EnrichResult> {
@@ -208,9 +211,19 @@ class ChatCompletionsProvider implements EnrichmentProvider {
               ],
             },
           ],
+          // The one field not in the protocol, and OpenRouter's own: route
+          // only to hosts that keep nothing of the Document.
+          ...(this.zeroRetention ? { provider: { zdr: true } } : {}),
         }),
       },
     );
+    // OpenRouter answers 404 when no host it may route to serves the model:
+    // under Zero retention, that is the Document waiting rather than going
+    // to a host that keeps it, and the user is told so.
+    if (res.status === 404 && this.zeroRetention)
+      throw new Error(
+        `no host keeps Zero retention for ${this.model}: choose another model, or turn Zero retention off (${(await res.text()).slice(0, 200)})`,
+      );
     if (!res.ok)
       throw new Error(
         `${this.baseUrl} ${res.status}: ${(await res.text()).slice(0, 300)}`,
@@ -376,21 +389,57 @@ function textsOf(
 
 /** A user's Provider as stored: where their Documents go, which model reads them, and the key. */
 export type SavedProvider = {
+  kind: ProviderKind;
   /** The endpoint, up to and including `/v1`. */
   baseUrl: string;
   /** The model id, as the endpoint names it. */
   model: string;
   /** Sent as a bearer token when set; a local server usually needs none. */
   apiKey: string | null;
+  /** Zero retention; a Custom Provider has none to offer, so is always false. */
+  zeroRetention: boolean;
   chosenAt: string;
 };
 
-/** What choosing a Provider names. A key left out is no key. */
-export type ProviderChoice = {
-  baseUrl: string;
-  model: string;
-  apiKey?: string | null;
-};
+/**
+ * What choosing a Provider names. A key left out is no key. OpenRouter names
+ * no address, and has Zero retention unless it is turned off.
+ */
+export type ProviderChoice =
+  | {
+      kind: "openrouter";
+      model: string;
+      apiKey?: string | null;
+      zeroRetention?: boolean;
+    }
+  | {
+      kind?: "custom";
+      baseUrl: string;
+      model: string;
+      apiKey?: string | null;
+    };
+
+/** The Provider a choice names, as it is stored but for when it was chosen. */
+export function resolveChoice(
+  choice: ProviderChoice,
+): Omit<SavedProvider, "chosenAt"> {
+  const apiKey = choice.apiKey || null;
+  return choice.kind === "openrouter"
+    ? {
+        kind: "openrouter",
+        baseUrl: openRouterAddress(),
+        model: choice.model,
+        apiKey,
+        zeroRetention: choice.zeroRetention !== false,
+      }
+    : {
+        kind: "custom",
+        baseUrl: choice.baseUrl,
+        model: choice.model,
+        apiKey,
+        zeroRetention: false,
+      };
+}
 
 /** This user's Provider, or null while they have chosen none. */
 export function savedProvider(
@@ -414,12 +463,7 @@ export function saveProvider(
   if (!user) throw new Error(`no user with id: ${userId}`);
   updateUser(lib, {
     ...user,
-    provider: {
-      baseUrl: choice.baseUrl,
-      model: choice.model,
-      apiKey: choice.apiKey || null,
-      chosenAt: new Date().toISOString(),
-    },
+    provider: { ...resolveChoice(choice), chosenAt: new Date().toISOString() },
   });
 }
 
@@ -434,11 +478,26 @@ export function clearProvider(lib: Library, userId: string): void {
  * the address does not answer with a list, so an unreachable server is not
  * mistaken for one that offers nothing.
  */
-export async function listModels(
+export const listModels = (baseUrl: string, apiKey?: string | null) =>
+  modelIdsAt(baseUrl, "/models", "id", apiKey);
+
+/**
+ * The model ids OpenRouter can read with Zero retention, sorted: those with at
+ * least one host on its `GET /endpoints/zdr`, which lists each host apart.
+ */
+export const listZeroRetentionModels = (
   baseUrl: string,
   apiKey?: string | null,
+) => modelIdsAt(baseUrl, "/endpoints/zdr", "model_id", apiKey);
+
+/** The model ids in the `data` list an address answers `path` with, each once, sorted. */
+async function modelIdsAt(
+  baseUrl: string,
+  path: string,
+  field: "id" | "model_id",
+  apiKey?: string | null,
 ): Promise<string[]> {
-  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/models`, {
+  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
     headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
   });
   if (!res.ok) throw new Error(`${baseUrl} answered ${res.status}`);
@@ -447,10 +506,10 @@ export async function listModels(
   } | null;
   if (!Array.isArray(body?.data))
     throw new Error(`${baseUrl} did not answer with a list of models`);
-  return (body.data as { id?: unknown }[])
-    .map((m) => m.id)
-    .filter((id): id is string => typeof id === "string" && id !== "")
-    .sort();
+  const ids = (body.data as Record<string, unknown>[])
+    .map((entry) => entry[field])
+    .filter((id): id is string => typeof id === "string" && id !== "");
+  return [...new Set(ids)].sort();
 }
 
 /**
@@ -502,7 +561,16 @@ export function getProvider(
   const model = cfg.model ?? saved?.model;
   if (!baseUrl || !model) throw new NoProvider();
   const apiKey = cfg.apiKey ?? keyAt(saved, baseUrl);
-  return new ChatCompletionsProvider(baseUrl, model, apiKey || undefined);
+  // Like the key, Zero retention belongs to the saved Provider's address: a
+  // run sent elsewhere goes to a Custom one, which has none to offer.
+  const zeroRetention =
+    saved?.zeroRetention === true && saved.baseUrl === baseUrl;
+  return new ChatCompletionsProvider(
+    baseUrl,
+    model,
+    apiKey || undefined,
+    zeroRetention,
+  );
 }
 
 export type EnrichOutcome =

@@ -17,10 +17,10 @@ import type { ProviderChoice } from "../core/enrich.ts";
 import { completeSetup, isSetupCode, SetupClosed } from "../core/setup.ts";
 import { readingLanguagesFrom } from "../languages.ts";
 import {
-  addressAndModel,
-  httpAddress,
+  destinationFrom,
   modelsAt,
-  noAddressToList,
+  namedProvider,
+  noModelsListed,
 } from "./provider-form.ts";
 
 /** The answer every Setup route gives once the Library has a user. */
@@ -62,8 +62,8 @@ function providerFrom(
   value: unknown,
 ): { provider: ProviderChoice | null } | { error: string } {
   if (value === undefined || value === null) return { provider: null };
-  const v = value as { baseUrl?: unknown; model?: unknown; apiKey?: unknown };
-  const named = addressAndModel(v);
+  const v = value as { apiKey?: unknown };
+  const named = namedProvider(value);
   if ("error" in named) return named;
   const apiKey = typeof v.apiKey === "string" ? v.apiKey.trim() : null;
   return { provider: { ...named, apiKey } };
@@ -90,11 +90,11 @@ export function setupRoutes(lib: Library, code: string | null) {
         const body = await bodyOf(req);
         const refused = refuseSetup(lib, code, body.code);
         if (refused) return refused;
-        const baseUrl = httpAddress(body.baseUrl);
-        if (!baseUrl) return noAddressToList();
+        const destination = destinationFrom(body);
+        if ("error" in destination) return noModelsListed(destination.error);
         const apiKey =
           typeof body.apiKey === "string" ? body.apiKey.trim() || null : null;
-        return modelsAt(baseUrl, apiKey);
+        return modelsAt(destination, apiKey);
       },
     },
 

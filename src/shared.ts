@@ -204,9 +204,15 @@ export type ApiUnmergeOutcome = {
  * The Library's Provider as Settings shows it. The key itself never crosses
  * the wire: the browser is told only whether one is held.
  */
+/** OpenRouter, at its one address, or Custom, at the address the user gave. */
+export type ProviderKind = "openrouter" | "custom";
+
 export type ApiProvider = {
+  kind: ProviderKind;
   baseUrl: string;
   model: string;
   hasKey: boolean;
+  /** Zero retention; always false for a Custom Provider, which has none to offer. */
+  zeroRetention: boolean;
   chosenAt: string;
 };
