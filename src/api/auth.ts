@@ -43,6 +43,13 @@ import {
 import { authConfig } from "../core/auth-config.ts";
 import type { Library } from "../core/db.ts";
 
+/** The answer every passkey ceremony gives while ZAYLA_URL is unset. */
+const noPasskeys = () =>
+  Response.json(
+    { error: "passkeys need ZAYLA_URL, the address Zayla is opened at" },
+    { status: 409 },
+  );
+
 /** The authentication ceremony routes, over this Library. */
 export function authRoutes(lib: Library) {
   return {
@@ -62,6 +69,7 @@ export function authRoutes(lib: Library) {
               }
             : null,
           needsSetup: countUsers(lib) === 0,
+          passkeysOffered: authConfig() !== null,
         });
       },
     },
@@ -75,6 +83,7 @@ export function authRoutes(lib: Library) {
         if (!user)
           return Response.json({ error: "unauthorized" }, { status: 401 });
         const cfg = authConfig();
+        if (!cfg) return noPasskeys();
         const userID = new Uint8Array(new ArrayBuffer(16));
         crypto.getRandomValues(userID);
         const options = await generateRegistrationOptions({
@@ -108,6 +117,7 @@ export function authRoutes(lib: Library) {
         if (!expectedChallenge)
           return Response.json({ error: "challenge expired" }, { status: 400 });
         const cfg = authConfig();
+        if (!cfg) return noPasskeys();
         let verification: Awaited<
           ReturnType<typeof verifyRegistrationResponse>
         >;
@@ -152,6 +162,7 @@ export function authRoutes(lib: Library) {
     "/api/auth/login/options": {
       POST: async (req: Bun.BunRequest) => {
         const cfg = authConfig();
+        if (!cfg) return noPasskeys();
         const options = await generateAuthenticationOptions({
           rpID: cfg.rpID,
           userVerification: "preferred",
@@ -177,6 +188,7 @@ export function authRoutes(lib: Library) {
             { status: 400 },
           );
         const cfg = authConfig();
+        if (!cfg) return noPasskeys();
         let verification: Awaited<
           ReturnType<typeof verifyAuthenticationResponse>
         >;

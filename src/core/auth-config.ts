@@ -1,11 +1,13 @@
 /**
- * WebAuthn / session configuration, read once from the environment.
+ * WebAuthn configuration, read from the environment.
  *
- * Zayla runs behind a reverse proxy (a Cloudflare tunnel): the Bun server
- * terminates plain HTTP locally while the browser talks to `https://<domain>`.
- * WebAuthn binds every ceremony to the Relying Party ID and origin, so those
- * MUST come from configuration — never derived from the incoming request, whose
- * scheme/host reflect the local hop, not what the browser saw. See README.
+ * Zayla usually runs behind a reverse proxy: the Bun server terminates plain
+ * HTTP locally while the browser talks to `https://<domain>`. WebAuthn binds
+ * every ceremony to the Relying Party ID and origin, so those MUST come from
+ * configuration — never derived from the incoming request, whose scheme/host
+ * reflect the local hop, not what the browser saw. One variable, ZAYLA_URL,
+ * names the address the browser opens; without it there are no passkeys, and
+ * passwords are the way in. See README.
  */
 export type AuthConfig = {
   /** Relying Party ID — the bare domain (no scheme, no port), e.g. "docs.example.com". */
@@ -16,14 +18,36 @@ export type AuthConfig = {
   rpName: string;
 };
 
-let cached: AuthConfig | null = null;
+type Env = Record<string, string | undefined>;
 
-/** Resolve auth config from env (RP_ID / RP_ORIGIN / RP_NAME), with localhost dev defaults. */
-export function authConfig(): AuthConfig {
-  if (cached) return cached;
-  const rpID = process.env.RP_ID ?? "localhost";
-  const rpOrigin = process.env.RP_ORIGIN ?? "http://localhost:3000";
-  const rpName = process.env.RP_NAME ?? "zayla";
-  cached = { rpID, rpOrigin, rpName };
-  return cached;
+/**
+ * The passkey configuration ZAYLA_URL describes, or null when it is unset.
+ * Throws, naming the variable, for an address Zayla can't be served at: not
+ * http(s), or more than an origin (a path, query, fragment or credentials).
+ */
+export function authConfig(env: Env = process.env): AuthConfig | null {
+  const raw = env.ZAYLA_URL?.trim();
+  if (!raw) return null;
+  const refuse = (why: string) =>
+    new Error(
+      `ZAYLA_URL=${raw} ${why}; give an origin like https://docs.example.com`,
+    );
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw refuse("isn't an address");
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:")
+    throw refuse("isn't http or https");
+  if (url.username || url.password) throw refuse("carries credentials");
+  if (url.pathname !== "/" || url.search || url.hash)
+    throw refuse(
+      "has more than an origin; Zayla is served at the root of its address",
+    );
+  return {
+    rpID: url.hostname,
+    rpOrigin: url.origin,
+    rpName: env.RP_NAME?.trim() || "Zayla",
+  };
 }

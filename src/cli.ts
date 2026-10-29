@@ -8,6 +8,7 @@ import {
   PASSWORD_RULE,
   setPassword,
 } from "./core/auth.ts";
+import { type AuthConfig, authConfig } from "./core/auth-config.ts";
 import type { Library } from "./core/db.ts";
 import {
   closeLibrary,
@@ -69,7 +70,8 @@ Usage:
 A person or organization is named by an id as \`entities\` prints it (#4, or just 4)
 or by any spelling the library has seen it under.
 
-The library lives at ./library (override with LIBRARY_DIR).
+The library lives at ./library (override with LIBRARY_DIR). Passkeys are offered
+once ZAYLA_URL names the address Zayla is opened at, e.g. https://docs.example.com.
 
 One process changes the library at a time. While the server runs, the commands
 that change it (import, enrich, merge, unmerge, delete, auth-password and
@@ -320,6 +322,12 @@ async function main(): Promise<void> {
       const port = Number(rest[0] ?? process.env.PORT ?? 3000);
       if (!Number.isInteger(port) || port < 0 || port > 65535)
         fail(`invalid port: ${rest[0]}`);
+      let passkeyConfig: AuthConfig | null = null;
+      try {
+        passkeyConfig = authConfig();
+      } catch (err) {
+        fail((err as Error).message);
+      }
       const { startServer } = await import("./serve.ts");
       // The server is the Library's writer for as long as it runs.
       const lib = openToWrite(SERVER);
@@ -331,6 +339,11 @@ async function main(): Promise<void> {
           process.exit(0);
         });
       console.log(`serving the library at ${server.url}`);
+      console.log(
+        passkeyConfig
+          ? `passkeys for ${passkeyConfig.rpOrigin}`
+          : "passkeys off: set ZAYLA_URL to the address Zayla is opened at",
+      );
       console.log("Ctrl-C to stop.");
       break;
     }

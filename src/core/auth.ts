@@ -402,7 +402,7 @@ export function parseCookies(req: Request): Record<string, string> {
 /**
  * Whether the browser reached us over HTTPS. Behind a TLS-terminating proxy
  * the request itself is plain HTTP, so the browser's Origin and the proxy's
- * X-Forwarded-Proto say what the browser actually saw. Not RP_ORIGIN: the same
+ * X-Forwarded-Proto say what the browser actually saw. Not ZAYLA_URL: the same
  * Library may also be opened at a LAN address over plain HTTP, where a Secure
  * cookie would never be sent back.
  */

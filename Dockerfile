@@ -1,10 +1,14 @@
-# Runs on the homelab (amd64); see `just deploy`.
+# Published to ghcr.io/ielashi/zayla for amd64 and arm64; see
+# .github/workflows/image.yml and "Install with Docker" in the README.
 FROM oven/bun:1.3.11 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 FROM oven/bun:1.3.11
+LABEL org.opencontainers.image.source=https://github.com/ielashi/zayla \
+      org.opencontainers.image.description="A personal archive for your documents" \
+      org.opencontainers.image.licenses=AGPL-3.0-only
 # pdftoppm / pdftotext, used by src/core/render.ts
 RUN apt-get update \
     && apt-get install -y --no-install-recommends poppler-utils \
