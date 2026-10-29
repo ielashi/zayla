@@ -443,7 +443,7 @@
   .settings { width: min(500px, calc(100vw - 32px)); }
   .settings h3 { font-size: 13px; font-weight: 600; margin: 4px 0 -4px; }
   .settings form + form { border-top: 1px solid var(--line); }
-  .settings form[hidden], .settings [role="tabpanel"][hidden] { display: none; }
+  .settings form[hidden], .settings [role="tabpanel"][hidden], .settings .same-as-row[hidden] { display: none; }
   /* Held near the top, not centred, so switching tabs never moves the tab row. */
   .settings { margin-top: min(10vh, 80px); }
   .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 24px 26px 0; }
@@ -808,7 +808,7 @@
     <h3>Passkey</h3>
     <p id="passkey-intro">Sign in with this device's passkey instead of typing your password.</p>
     <div class="same-as-status" id="passkey-status" role="status"></div>
-    <div class="same-as-row">
+    <div class="same-as-row" id="passkey-row">
       <button type="submit" id="passkey-add">Add a passkey</button>
     </div>
   </form>

@@ -2095,6 +2095,7 @@ el("pw-form").addEventListener("submit", async (e) => {
 const passkeyForm = el<HTMLFormElement>("passkey-form");
 const passkeyStatus = el("passkey-status");
 const passkeyAdd = el<HTMLButtonElement>("passkey-add");
+const passkeyRow = el("passkey-row");
 const passkeyIntro = el("passkey-intro");
 
 function setPasskeyStatus(msg: string, isErr = false) {
@@ -2107,7 +2108,12 @@ function fillPasskey() {
   // already says so. Where it has them but the server isn't told its address,
   // say what's missing rather than offer a prompt that would fail.
   passkeyForm.hidden = !browserHasPasskeys();
-  passkeyAdd.hidden = !passkeysWork();
+  // With nothing to press there is nothing to report either, so the button's
+  // row and the status line go too, leaving no gap under the intro.
+  const works = passkeysWork();
+  passkeyAdd.hidden = !works;
+  passkeyStatus.hidden = !works;
+  passkeyRow.hidden = !works;
   passkeyIntro.textContent = passkeysOffered
     ? "Sign in with this device's passkey instead of typing your password."
     : "Passkeys need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://docs.example.com) and restart it.";
