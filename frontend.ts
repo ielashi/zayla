@@ -4,6 +4,7 @@ import {
 } from "@simplewebauthn/browser";
 import { listedEntities } from "./src/browse.ts";
 import { wrapFocus } from "./src/focus.ts";
+import { type Html, type HtmlValue, html, join, setHtml } from "./src/html.ts";
 import {
   languageName,
   OFFERED_LANGUAGES,
@@ -135,14 +136,11 @@ const fmtDate = (iso: string) =>
   });
 const kind = (d: ApiDocument) =>
   (d.ext || (d.mime.split("/")[1] ?? "")).toUpperCase() || "FILE";
-const esc = (s: string) =>
-  s.replace(
-    /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c,
-  );
-
 function unreachable() {
-  view.innerHTML = `<div class="state"><h2>Couldn't reach the library</h2><p>Is the server running?</p></div>`;
+  setHtml(
+    view,
+    html`<div class="state"><h2>Couldn't reach the library</h2><p>Is the server running?</p></div>`,
+  );
 }
 
 /**
@@ -330,13 +328,10 @@ function section(): Destination["name"] | null {
 }
 
 /** Each destination's mark in a phone's tab bar, beside its label. */
-const TAB_ICONS: Record<Destination["name"], string> = {
-  documents:
-    '<path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
-  organizations:
-    '<path d="M4 21V5a1 1 0 011-1h9a1 1 0 011 1v16M15 9h4a1 1 0 011 1v11M3 21h18"/><path d="M8 8h3M8 12h3M8 16h3"/>',
-  people:
-    '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.5a6.5 6.5 0 013.5 5.5"/>',
+const TAB_ICONS: Record<Destination["name"], Html> = {
+  documents: html`<path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>`,
+  organizations: html`<path d="M4 21V5a1 1 0 011-1h9a1 1 0 011 1v16M15 9h4a1 1 0 011 1v11M3 21h18"/><path d="M8 8h3M8 12h3M8 16h3"/>`,
+  people: html`<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 4.5a3.5 3.5 0 010 7M18 14.5a6.5 6.5 0 013.5 5.5"/>`,
 };
 
 /**
@@ -348,12 +343,10 @@ function renderNav() {
     DESTINATIONS.map((d) => {
       const a = document.createElement("a");
       a.href = d.path;
-      a.textContent = d.label;
-      if (icons)
-        a.insertAdjacentHTML(
-          "afterbegin",
-          `<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${TAB_ICONS[d.name]}</svg>`,
-        );
+      setHtml(
+        a,
+        html`${icons && html`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${TAB_ICONS[d.name]}</svg>`}${d.label}`,
+      );
       // "page" for the destination itself; "true" for the one an entity's page
       // is below, which is where the reader is without being what they are on.
       if (section() === d.name)
@@ -390,7 +383,10 @@ function renderShortcuts() {
       const a = document.createElement("a");
       a.href = s.path;
       if (s.path === location.pathname) a.setAttribute("aria-current", "page");
-      a.innerHTML = `<span class="sc-name">${esc(s.displayName)}</span>${countLabel(s.documents)}`;
+      setHtml(
+        a,
+        html`<span class="sc-name">${s.displayName}</span>${countLabel(s.documents)}`,
+      );
       return a;
     }),
   );
@@ -473,8 +469,8 @@ const documentWord = (documents: number) =>
   documents === 1 ? "document" : "documents";
 
 /** One entity's Document count: a number to scan, and the word for a reader. */
-function countLabel(documents: number): string {
-  return `<span class="ent-count">${documents}<span class="sr-only"> ${documentWord(documents)}</span></span>`;
+function countLabel(documents: number): Html {
+  return html`<span class="ent-count">${documents}<span class="sr-only"> ${documentWord(documents)}</span></span>`;
 }
 
 /**
@@ -497,7 +493,7 @@ const looksLike = (id: number): string[] =>
  * shown: the one row in the lists that is the reader's own paperwork rather
  * than someone else's.
  */
-const ME_TAG = `<span class="me-tag">Me</span>`;
+const ME_TAG = html`<span class="me-tag">Me</span>`;
 
 /** Whether this entity is the Person the reader has marked as themselves. */
 const isMe = (id: number) => state.browse?.me === id;
@@ -511,20 +507,23 @@ const isMe = (id: number) => state.browse?.me === id;
  * reading, and leads to the page where the question can be answered — nothing
  * is merged from a list, because a list does not show what would be merged.
  */
-function entityRow(e: ApiEntity, kind: EntityKind): string {
+function entityRow(e: ApiEntity, kind: EntityKind): Html {
   const alike = looksLike(e.id);
-  const flag = alike.length
-    ? `<span class="ent-alike" title="Possibly the same as ${esc(alike.join(", "))}">Possible duplicate</span>`
-    : "";
+  const flag =
+    alike.length > 0 &&
+    html`<span class="ent-alike" title="Possibly the same as ${alike.join(", ")}">Possible duplicate</span>`;
   // Whose paperwork the row is comes before any question about its name: the
   // reader knows which row is theirs at a glance, and the question stays next
   // to the count it is about.
-  return `<a class="ent" href="${entityPath(kind, e.id)}"><span class="ent-name">${esc(e.displayName)}</span>${isMe(e.id) ? ME_TAG : ""}${flag}${countLabel(e.documents)}</a>`;
+  return html`<a class="ent" href="${entityPath(kind, e.id)}"><span class="ent-name">${e.displayName}</span>${isMe(e.id) && ME_TAG}${flag}${countLabel(e.documents)}</a>`;
 }
 
 /** The panel for a destination whose list is empty, with the reason it is. */
 function renderNothing(heading: string, why: string) {
-  view.innerHTML = `<div class="state"><h2>${esc(heading)}</h2><p>${esc(why)}</p></div>`;
+  setHtml(
+    view,
+    html`<div class="state"><h2>${heading}</h2><p>${why}</p></div>`,
+  );
 }
 
 /**
@@ -557,18 +556,18 @@ function renderOrganizations() {
   // One column of sections divided like a list, each headed by its
   // Organization so that a reader can move between them by heading, with the
   // People who acted for it beneath.
-  view.innerHTML = `<div class="entities">${browse.organizations
-    .map(
-      (o) => `<section class="org">
+  setHtml(
+    view,
+    html`<div class="entities">${browse.organizations.map(
+      (o) => html`<section class="org">
         <h2 class="org-head">${entityRow(o, "organization")}</h2>
         ${
-          o.people.length
-            ? `<ul class="under">${o.people.map((p) => `<li>${entityRow(p, "person")}</li>`).join("")}</ul>`
-            : ""
+          o.people.length > 0 &&
+          html`<ul class="under">${o.people.map((p) => html`<li>${entityRow(p, "person")}</li>`)}</ul>`
         }
       </section>`,
-    )
-    .join("")}</div>`;
+    )}</div>`,
+  );
 }
 
 function renderPeople() {
@@ -581,9 +580,12 @@ function renderPeople() {
       "Everyone your documents name appeared for an institution, so they are listed under Organizations.",
     );
 
-  view.innerHTML = `<ul class="entities">${browse.people
-    .map((p) => `<li>${entityRow(p, "person")}</li>`)
-    .join("")}</ul>`;
+  setHtml(
+    view,
+    html`<ul class="entities">${browse.people.map(
+      (p) => html`<li>${entityRow(p, "person")}</li>`,
+    )}</ul>`,
+  );
 }
 
 /**
@@ -604,14 +606,19 @@ const isWaiting = (d: ApiDocument) =>
  * offers its retry on both, as a waiting one offers the way to have it read.
  */
 /** A snippet as HTML, its marked passages wrapped in <mark>. */
-function markedText({ text, marks }: NonNullable<ApiSearchHit["snippet"]>) {
-  let html = "";
+function markedText({
+  text,
+  marks,
+}: NonNullable<ApiSearchHit["snippet"]>): Html {
+  const parts: Html[] = [];
   let at = 0;
   for (const [from, to] of marks) {
-    html += `${esc(text.slice(at, from))}<mark>${esc(text.slice(from, to))}</mark>`;
+    parts.push(
+      html`${text.slice(at, from)}<mark>${text.slice(from, to)}</mark>`,
+    );
     at = to;
   }
-  return html + esc(text.slice(at));
+  return html`${parts}${text.slice(at)}`;
 }
 
 function documentCard(d: ApiDocument): HTMLButtonElement {
@@ -623,37 +630,37 @@ function documentCard(d: ApiDocument): HTMLButtonElement {
   card.dataset.hash = d.hash;
   card.className = `card${enriching ? " enriching" : ""}${errored ? " errored" : ""}${waiting ? " waiting" : ""}`;
   const who = [partyLabel(d.sender), partyLabel(d.receiver)]
-    .map(esc)
     .filter(Boolean)
     .join(" → ");
   const overlay = enriching
-    ? `<div class="working"><div class="spinner"></div>Enriching…</div>`
+    ? html`<div class="working"><div class="spinner"></div>Enriching…</div>`
     : errored
-      ? `<div class="working err"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Enrich failed<br><span class="retry-hint">click to retry</span></span></div>`
+      ? html`<div class="working err"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Enrich failed<br><span class="retry-hint">click to retry</span></span></div>`
       : queued
-        ? `<div class="working wait">Queued to be read</div>`
-        : waiting
-          ? `<div class="working wait"><span>Waiting to be read${state.provider ? "" : `<br><span class="retry-hint">no Provider chosen</span>`}</span></div>`
-          : "";
+        ? html`<div class="working wait">Queued to be read</div>`
+        : waiting &&
+          html`<div class="working wait"><span>Waiting to be read${!state.provider && html`<br><span class="retry-hint">no Provider chosen</span>`}</span></div>`;
   // Found only through its Transcription: nothing else on the card says why it
   // is here, so the passage that matched takes the summary's place.
   const snippet = hitFor(d.hash)?.snippet;
-  const passage = snippet
-    ? `<div class="snippet passage">${markedText(snippet)}</div>`
-    : "";
-  card.innerHTML = `
+  const passage =
+    snippet && html`<div class="snippet passage">${markedText(snippet)}</div>`;
+  setHtml(
+    card,
+    html`
       <div class="thumb">
         <span class="ph">${kind(d)}</span>
-        <img class="bg" src="/api/documents/${d.hash}/thumb" loading="lazy" alt="" aria-hidden="true" onerror="this.style.display='none'">
-        <img class="fg" src="/api/documents/${d.hash}/thumb" loading="lazy" alt="" onerror="this.style.display='none'">
+        <img class="bg" src="/api/documents/${d.hash}/thumb" loading="lazy" alt="" aria-hidden="true" data-hide-on-error>
+        <img class="fg" src="/api/documents/${d.hash}/thumb" loading="lazy" alt="" data-hide-on-error>
         ${overlay}
       </div>
       <div class="body">
-        <div class="name">${esc(titleOf(d))}</div>
-        ${passage ? passage : d.summary ? `<div class="snippet">${esc(d.summary)}</div>` : ""}
-        ${who ? `<div class="who">${who}</div>` : ""}
-        <div class="meta"><span class="dt">${d.date ? fmtDate(d.date) : '<span class="undated">undated</span>'}</span></div>
-      </div>`;
+        <div class="name">${titleOf(d)}</div>
+        ${passage || (d.summary && html`<div class="snippet">${d.summary}</div>`)}
+        ${who && html`<div class="who">${who}</div>`}
+        <div class="meta"><span class="dt">${d.date ? fmtDate(d.date) : html`<span class="undated">undated</span>`}</span></div>
+      </div>`,
+  );
   card.onclick = errored ? () => enrichDoc(d.hash) : () => openDoc(d);
   return card;
 }
@@ -668,13 +675,19 @@ function documentGrid(docs: ApiDocument[]): HTMLDivElement {
 
 function renderDocuments(list: ApiDocument[]) {
   if (!state.docs.length) {
-    view.innerHTML = state.provider
-      ? `<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are imported and enriched automatically.</p></div>`
-      : `<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are filed straight away, and read once you <button type="button" class="settings-link">choose a Provider in Settings</button>.</p></div>`;
+    setHtml(
+      view,
+      state.provider
+        ? html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are imported and enriched automatically.</p></div>`
+        : html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are filed straight away, and read once you <button type="button" class="settings-link">choose a Provider in Settings</button>.</p></div>`,
+    );
     return;
   }
   if (!list.length) {
-    view.innerHTML = `<div class="state"><h2>Nothing matches</h2><p>Try a different search.</p></div>`;
+    setHtml(
+      view,
+      html`<div class="state"><h2>Nothing matches</h2><p>Try a different search.</p></div>`,
+    );
     return;
   }
   view.replaceChildren(...waitingNotice(), documentGrid(list));
@@ -693,9 +706,12 @@ function waitingNotice(): HTMLElement[] {
   if (!n) return [];
   const notice = document.createElement("div");
   notice.className = "waiting-notice";
-  notice.innerHTML = state.provider
-    ? `<span>${n} ${documentWord(n)} waiting to be read by ${esc(state.provider.model)}.</span><button type="button" class="read-waiting">Read them now</button>`
-    : `<span>${n} ${documentWord(n)} waiting to be read. No Provider has been chosen to read them.</span><button type="button" class="settings-link">Choose a Provider</button>`;
+  setHtml(
+    notice,
+    state.provider
+      ? html`<span>${n} ${documentWord(n)} waiting to be read by ${state.provider.model}.</span><button type="button" class="read-waiting">Read them now</button>`
+      : html`<span>${n} ${documentWord(n)} waiting to be read. No Provider has been chosen to read them.</span><button type="button" class="settings-link">Choose a Provider</button>`,
+  );
   return [notice];
 }
 
@@ -722,18 +738,19 @@ function suspectedBlock(page: ApiEntityPage): HTMLElement[] {
   if (!page.suspected.length) return [];
   const block = document.createElement("section");
   block.className = "ep-alike";
-  block.innerHTML = `
+  setHtml(
+    block,
+    html`
     <h3>Possibly the same</h3>
     <p class="ep-note">Nothing has been merged: these are questions, not changes.</p>
-    <ul>${page.suspected
-      .map(
-        (e) => `<li>
-          <a href="${entityPath(page.kind, e.id)}">${esc(e.displayName)}</a>
+    <ul>${page.suspected.map(
+      (e) => html`<li>
+          <a href="${entityPath(page.kind, e.id)}">${e.displayName}</a>
           ${countLabel(e.documents)}
           <button type="button" class="ep-same" data-same-as="${e.id}">Same as…</button>
         </li>`,
-      )
-      .join("")}</ul>`;
+    )}</ul>`,
+  );
   return [block];
 }
 
@@ -759,23 +776,22 @@ function renderEntity(id: number) {
   const page = held.page;
   if (!page) return view.replaceChildren();
 
-  // Both halves are HTML by the time they are in here, the label included:
-  // whatever came out of the Library has already been through `esc`, and what
-  // links to another page is markup on purpose.
-  const facts: [label: string, html: string][] = [
+  // A fact is text or markup: what links to another page is markup on purpose.
+  const facts: [label: string, value: HtmlValue][] = [
     // Stated even when there is one spelling: this page is where a Merge is
     // checked, and "written as" answers that question whatever the answer is.
-    ["Written as", page.variants.map(esc).join(", ")],
+    ["Written as", page.variants.join(", ")],
   ];
   if (page.affiliations.length)
     facts.push([
       "Appeared for",
-      page.affiliations
-        .map(
+      join(
+        page.affiliations.map(
           (a) =>
-            `<a href="${entityPath("organization", a.id)}">${esc(a.displayName)}</a>`,
-        )
-        .join(", "),
+            html`<a href="${entityPath("organization", a.id)}">${a.displayName}</a>`,
+        ),
+        html`, `,
+      ),
     ]);
   // Each name merged in is named in its own right rather than only spelled out
   // among the variants, because each is one Merge and each can be taken back on
@@ -783,12 +799,10 @@ function renderEntity(id: number) {
   if (page.mergedNames.length)
     facts.push([
       "Merged in",
-      page.mergedNames
-        .map(
-          (m) =>
-            `<span class="ep-merged">${esc(m.displayName)}<button type="button" class="ep-undo" data-unmerge="${m.id}">Unmerge</button></span>`,
-        )
-        .join(""),
+      page.mergedNames.map(
+        (m) =>
+          html`<span class="ep-merged">${m.displayName}<button type="button" class="ep-undo" data-unmerge="${m.id}">Unmerge</button></span>`,
+      ),
     ]);
 
   // Whom this one could be merged with: every other entity of its kind the
@@ -801,8 +815,8 @@ function renderEntity(id: number) {
   const refused = candidates.length
     ? ""
     : state.browse
-      ? ` disabled title="The library holds no other ${page.kind === "person" ? "person" : "organization"} to be the same as"`
-      : " disabled";
+      ? html` disabled title="The library holds no other ${page.kind === "person" ? "person" : "organization"} to be the same as"`
+      : html` disabled`;
 
   // Where the mark is made, and the only place it is: from the page of the
   // Person it is about, so the reader's own name never has to be typed in
@@ -810,20 +824,23 @@ function renderEntity(id: number) {
   // page offers nothing, and the Person already marked is labelled at the head
   // of her page rather than asked again.
   const mark =
-    page.kind === "person" && !isMe(page.id)
-      ? `<button type="button" class="me-btn" data-mark-me="${page.id}">This is me</button>`
-      : "";
+    page.kind === "person" &&
+    !isMe(page.id) &&
+    html`<button type="button" class="me-btn" data-mark-me="${page.id}">This is me</button>`;
 
   const head = document.createElement("header");
   head.className = "ep-head";
-  head.innerHTML = `
-    <h2>${esc(page.displayName)}${isMe(page.id) ? ME_TAG : ""}</h2>
+  setHtml(
+    head,
+    html`
+    <h2>${page.displayName}${isMe(page.id) && ME_TAG}</h2>
     <p class="ep-count">${documentsLine(page.documents)}</p>
-    <dl class="kv ep-facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
+    <dl class="kv ep-facts">${facts.map(([k, v]) => html`<dt>${k}</dt><dd>${v}</dd>`)}</dl>
     <div class="ep-actions">
       <button type="button" class="ep-same" data-same-as=""${refused}>Same as…</button>
       ${mark}
-    </div>`;
+    </div>`,
+  );
 
   const sections = page.roles.flatMap((group) => {
     const docs = searchDocuments(
@@ -836,7 +853,10 @@ function renderEntity(id: number) {
     const block = document.createElement("section");
     block.className = "ep-role";
     const heading = document.createElement("h3");
-    heading.innerHTML = `${ROLE_HEADINGS[group.role]}${countLabel(docs.length)}`;
+    setHtml(
+      heading,
+      html`${ROLE_HEADINGS[group.role]}${countLabel(docs.length)}`,
+    );
     block.append(heading, documentGrid(docs));
     return [block];
   });
@@ -1113,50 +1133,52 @@ function openDoc(d: ApiDocument) {
   const panel = el("panel");
 
   const pages = pagesHtml(d);
-  const hasPreview = pages !== "";
+  const hasPreview = pages !== null;
 
   const fmtParty = (p: Party | null) =>
     p && (p.organization || p.person)
-      ? esc(p.organization || p.person) +
-        (p.organization && p.person ? ` (${esc(p.person)})` : "")
+      ? (p.organization || p.person) +
+        (p.organization && p.person ? ` (${p.person})` : "")
       : "";
   const from = fmtParty(d.sender);
   const to = fmtParty(d.receiver);
-  const kv: [string, string][] = [];
+  const kv: [label: string, value: HtmlValue][] = [];
   if (from) kv.push(["From", from]);
   if (to) kv.push(["To", to]);
-  if (d.people?.length) kv.push(["People", d.people.map(esc).join("<br>")]);
+  if (d.people?.length) kv.push(["People", join(d.people, html`<br>`)]);
   if (d.date) kv.push(["Date", fmtDate(d.date)]);
   if (d.deadlines?.length)
     kv.push([
       "Deadlines",
-      d.deadlines
-        .map((x) => `${esc(x.label)} — ${fmtDate(x.date)}`)
-        .join("<br>"),
+      join(
+        d.deadlines.map((x) => `${x.label} — ${fmtDate(x.date)}`),
+        html`<br>`,
+      ),
     ]);
-  if (d.languages?.length)
-    kv.push(["Languages", d.languages.map(esc).join(", ")]);
-  for (const [k, v] of d.ref || []) kv.push([esc(String(k)), esc(String(v))]);
+  if (d.languages?.length) kv.push(["Languages", d.languages.join(", ")]);
+  for (const [k, v] of d.ref || []) kv.push([String(k), String(v)]);
 
-  panel.innerHTML = `
+  setHtml(
+    panel,
+    html`
     <div class="p-head">
       <button class="p-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      ${hasPreview ? "" : `<div class="p-thumb"><img src="/api/documents/${d.hash}/thumb" alt="" onerror="this.closest('.p-thumb').style.display='none'"></div>`}
+      ${!hasPreview && html`<div class="p-thumb"><img src="/api/documents/${d.hash}/thumb" alt="" data-hide-on-error=".p-thumb"></div>`}
       <div class="p-head-text">
-        <h2 id="p-title">${esc(titleOf(d))}</h2>
+        <h2 id="p-title">${titleOf(d)}</h2>
       </div>
     </div>
-    ${d.summary ? `<div class="p-sec"><h3>Summary</h3><p class="p-summary">${esc(d.summary)}</p></div>` : ""}
-    ${kv.length ? `<div class="p-sec"><h3>Details</h3><dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>` : ""}
+    ${d.summary && html`<div class="p-sec"><h3>Summary</h3><p class="p-summary">${d.summary}</p></div>`}
+    ${kv.length > 0 && html`<div class="p-sec"><h3>Details</h3><dl class="kv">${kv.map(([k, v]) => html`<dt>${k}</dt><dd>${v}</dd>`)}</dl></div>`}
     <div class="p-sec">
       <h3>File</h3>
       <dl class="kv">
-        <dt>Format</dt><dd>${esc(d.mime)}</dd>
+        <dt>Format</dt><dd>${d.mime}</dd>
         <dt>Size</dt><dd class="mono">${fmtSize(d.bytes)}</dd>
         <dt>Added</dt><dd>${fmtDate(d.addedAt)}</dd>
-        <dt>Status</dt><dd>${esc(d.status)}</dd>
+        <dt>Status</dt><dd>${d.status}</dd>
       </dl>
-      <div class="p-file">${esc(d.filename)} · ${esc(d.hash.slice(0, 16))}…</div>
+      <div class="p-file">${d.filename} · ${d.hash.slice(0, 16)}…</div>
     </div>
     <div class="p-sec p-open">
       <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
@@ -1164,12 +1186,14 @@ function openDoc(d: ApiDocument) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
       </a>
     </div>
-    <div class="p-sec" id="p-delete"></div>`;
+    <div class="p-sec" id="p-delete"></div>`,
+  );
   const closeBtn = panel.querySelector<HTMLButtonElement>(".p-close");
   if (closeBtn) closeBtn.onclick = closeDoc;
   renderDeleteOffer(d);
   const viewer = el("viewer");
-  viewer.innerHTML = pages;
+  if (pages) setHtml(viewer, pages);
+  else viewer.replaceChildren();
   viewer.scrollTop = 0;
   const scrim = el("scrim");
   scrim.scrollTop = 0; // a phone's sheet scrolls as a whole, from the first page
@@ -1184,40 +1208,49 @@ function openDoc(d: ApiDocument) {
  * server can't render either, so it becomes the placeholder offering the
  * Original. Empty for a Document with no pages to show.
  */
-function pagesHtml(d: ApiDocument): string {
-  if (d.mime !== "application/pdf" && !d.mime.startsWith("image/")) return "";
+function pagesHtml(d: ApiDocument): Html | null {
+  if (d.mime !== "application/pdf" && !d.mime.startsWith("image/")) return null;
   const count = d.pages ?? 1;
   const pages = Array.from({ length: count }, (_, i) => {
     const n = i + 1;
-    return `<figure class="page"><img src="/api/documents/${d.hash}/pages/${n}" loading="lazy" decoding="async" alt="Page ${n} of ${count}"></figure>`;
+    return html`<figure class="page"><img src="/api/documents/${d.hash}/pages/${n}" loading="lazy" decoding="async" alt="Page ${n} of ${count}"></figure>`;
   });
-  return `<div class="pages" data-hash="${d.hash}">${pages.join("")}</div>`;
+  return html`<div class="pages" data-hash="${d.hash}">${pages}</div>`;
 }
 
 /** What a page that couldn't be shown says in its place: the Original is still there. */
 function missingPage(page: HTMLElement, hash: string) {
   page.classList.add("page-missing");
-  page.innerHTML = `
+  setHtml(
+    page,
+    html`
     <p>This page couldn't be shown here.</p>
-    <a class="open" href="/api/documents/${hash}/original" target="_blank" rel="noopener">Open original</a>`;
+    <a class="open" href="/api/documents/${hash}/original" target="_blank" rel="noopener">Open original</a>`,
+  );
 }
 
 // Delete is permanent — no trash, no undo — so it asks first, in the panel
 // itself, naming what will be gone.
 function renderDeleteOffer(d: ApiDocument) {
   const sec = el("p-delete");
-  sec.innerHTML = `<button class="del-btn" type="button">Delete document</button>`;
+  setHtml(
+    sec,
+    html`<button class="del-btn" type="button">Delete document</button>`,
+  );
   const btn = sec.querySelector<HTMLButtonElement>(".del-btn");
   if (btn) btn.onclick = () => renderDeleteAsk(d);
 }
 function renderDeleteAsk(d: ApiDocument) {
   const sec = el("p-delete");
-  sec.innerHTML = `
-    <p class="del-ask">Delete <strong>${esc(titleOf(d))}</strong> permanently? This can't be undone.</p>
+  setHtml(
+    sec,
+    html`
+    <p class="del-ask">Delete <strong>${titleOf(d)}</strong> permanently? This can't be undone.</p>
     <div class="del-actions">
       <button class="del-btn confirm" type="button">Delete</button>
       <button class="del-btn cancel" type="button">Cancel</button>
-    </div>`;
+    </div>`,
+  );
   const [confirm, cancel] = sec.querySelectorAll<HTMLButtonElement>("button");
   if (cancel) cancel.onclick = () => renderDeleteOffer(d);
   if (confirm) {
@@ -1251,7 +1284,7 @@ function closeDoc() {
   const scrim = el("scrim");
   scrim.classList.remove("shown");
   scrim.classList.remove("has-preview");
-  el("viewer").innerHTML = ""; // stop loading the original
+  el("viewer").replaceChildren(); // stop loading the original
   // The card that opened it, or the one drawn in its place if the grid was
   // redrawn meanwhile, as it is while other Documents are being read.
   const card = lastFocus?.isConnected
@@ -1286,6 +1319,20 @@ el("viewer").addEventListener(
     const page = img.closest<HTMLElement>(".page");
     const hash = img.closest<HTMLElement>(".pages")?.dataset.hash;
     if (page && hash) missingPage(page, hash);
+  },
+  true,
+);
+// A thumbnail that can't be had steps aside for what is under it: the image
+// itself, or the nearest ancestor its `data-hide-on-error` names. Caught here
+// rather than in an `onerror` attribute, which the page's CSP refuses to run.
+document.addEventListener(
+  "error",
+  (e) => {
+    if (!(e.target instanceof HTMLImageElement)) return;
+    const hide = e.target.dataset.hideOnError;
+    if (hide === undefined) return;
+    const gone = hide ? e.target.closest<HTMLElement>(hide) : e.target;
+    if (gone) gone.style.display = "none";
   },
   true,
 );
@@ -1721,7 +1768,10 @@ function fillSettings() {
 function fillWaiting() {
   const n = waitingDocs().length;
   provWaiting.hidden = !state.provider || n === 0;
-  provWaiting.innerHTML = `<span>${n} ${documentWord(n)} waiting to be read.</span><button type="button" id="prov-read">Read them now</button>`;
+  setHtml(
+    provWaiting,
+    html`<span>${n} ${documentWord(n)} waiting to be read.</span><button type="button" id="prov-read">Read them now</button>`,
+  );
 }
 
 function openSettings() {
@@ -1867,26 +1917,25 @@ function setLangStatus(msg: string, isErr = false) {
 }
 
 /** The options every picker offers: the tested ones first, in their own order, then the rest by name. */
-function languageOptions(): string {
+function languageOptions(): Html {
   const option = (code: string) =>
-    `<option value="${code}">${esc(languageName(code))}</option>`;
+    html`<option value="${code}">${languageName(code)}</option>`;
   const byName = (a: string, b: string) =>
     languageName(a).localeCompare(languageName(b));
   const untested = OFFERED_LANGUAGES.filter(
     (c) => !TESTED_LANGUAGES.includes(c),
   ).sort(byName);
-  return (
-    `<optgroup label="Tested">${TESTED_LANGUAGES.map(option).join("")}</optgroup>` +
-    `<optgroup label="Untested">${untested.map(option).join("")}</optgroup>`
-  );
+  return html`<optgroup label="Tested">${TESTED_LANGUAGES.map(option)}</optgroup><optgroup label="Untested">${untested.map(option)}</optgroup>`;
 }
 
 /** Offer every language in these pickers, the first one required. */
 function fillLanguagePickers(picks: HTMLSelectElement[]) {
   const options = languageOptions();
   picks.forEach((pick, i) => {
-    pick.innerHTML =
-      (i === 0 ? "" : `<option value="">None</option>`) + options;
+    setHtml(
+      pick,
+      html`${i > 0 && html`<option value="">None</option>`}${options}`,
+    );
   });
 }
 

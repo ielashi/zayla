@@ -1,6 +1,5 @@
 {
   "name": "zayla",
-  "module": "index.ts",
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
     "@types/bun": "latest"

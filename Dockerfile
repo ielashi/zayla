@@ -19,7 +19,7 @@ COPY package.json bun.lock ./
 COPY index.html frontend.ts ./
 COPY public ./public
 COPY src ./src
-ENV LIBRARY_DIR=/data PORT=3000
+ENV NODE_ENV=production LIBRARY_DIR=/data PORT=3000
 RUN mkdir -p /data && chown bun:bun /data
 USER bun
 EXPOSE 3000
