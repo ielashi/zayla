@@ -73,7 +73,9 @@ test("of many processes taking over one stale lock at once, exactly one gets it"
   await lockedBy(crashed.pid, "server");
 
   // Each racer waits for the same moment, tries to take the lock, and holds
-  // what it got long enough for every other racer to have tried.
+  // what it got until every racer has answered. Losers take turns under the
+  // guard, so no fixed hold would do: one still queued when the winner let go
+  // would find the lock free and rightly take it.
   const start = Date.now() + 500;
   const racer = `
     import { takeWriterLock, LibraryLocked } from ${JSON.stringify(`${import.meta.dir}/lock.ts`)};
@@ -81,7 +83,7 @@ test("of many processes taking over one stale lock at once, exactly one gets it"
     try {
       const lock = takeWriterLock(${JSON.stringify(TMP)}, "racer");
       console.log("took");
-      await Bun.sleep(800);
+      await Bun.stdin.text();
       lock.release();
     } catch (err) {
       if (!(err instanceof LibraryLocked)) throw err;
@@ -89,15 +91,20 @@ test("of many processes taking over one stale lock at once, exactly one gets it"
     }
   `;
   const racers = Array.from({ length: 12 }, () =>
-    Bun.spawn(["bun", "-e", racer], { stdout: "pipe", stderr: "inherit" }),
+    Bun.spawn(["bun", "-e", racer], {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "inherit",
+    }),
   );
   const said = await Promise.all(
     racers.map(async (p) => {
-      const out = await new Response(p.stdout).text();
-      await p.exited;
-      return out.trim();
+      const { value } = await p.stdout.getReader().read();
+      return new TextDecoder().decode(value).trim();
     }),
   );
+  for (const p of racers) p.stdin.end();
+  await Promise.all(racers.map((p) => p.exited));
 
   expect(said.filter((s) => s === "took")).toHaveLength(1);
   expect(said.filter((s) => s === "refused")).toHaveLength(11);
