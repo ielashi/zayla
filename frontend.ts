@@ -1194,19 +1194,11 @@ function drawPanel(d: ApiDocument) {
       </dl>
       <div class="p-file">${d.filename} · ${d.hash.slice(0, 16)}…</div>
     </div>
-    <div class="p-sec p-open">
-      <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
-        Open original
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
-      </a>
-    </div>
-    <div class="p-sec" id="p-process"></div>
-    <div class="p-sec" id="p-delete"></div>`,
+    <div class="p-bar" id="p-bar"></div>`,
   );
   const closeBtn = panel.querySelector<HTMLButtonElement>(".p-close");
   if (closeBtn) closeBtn.onclick = closeDoc;
-  renderProcessOffer(d);
-  renderDeleteOffer(d);
+  renderActions(d);
 }
 /**
  * A Document's pages for the viewer, as images the server rendered: the same
@@ -1240,10 +1232,13 @@ function missingPage(page: HTMLElement, hash: string) {
 const openDocument = (hash: string) =>
   openHash === hash ? state.docs.find((d) => d.hash === hash) : undefined;
 
-/** Bring the Process action up to date, if this Document is the open one. */
-function redrawProcessOffer(hash: string) {
+/**
+ * Bring the actions up to date, if this Document is the open one. A question
+ * being asked stays: its answer redraws them.
+ */
+function redrawActions(hash: string) {
   const d = openDocument(hash);
-  if (d) renderProcessOffer(d);
+  if (d && !el("p-bar").querySelector(".confirm")) renderActions(d);
 }
 
 /**
@@ -1256,60 +1251,71 @@ function redrawPanel(hash: string) {
   if (!d) return;
   const active = document.activeElement;
   const focusHere = active === document.body || el("panel").contains(active);
-  const askingDelete = el("p-delete").querySelector(".confirm") !== null;
+  const askingDelete = el("p-bar").querySelector(".del-btn.confirm") !== null;
   drawPanel(d);
   if (askingDelete) renderDeleteAsk(d);
-  else if (focusHere) el("p-process").querySelector("button")?.focus();
+  else if (focusHere)
+    el("p-bar").querySelector<HTMLElement>(".proc-btn")?.focus();
 }
 
-// A Document waiting to be read goes straight to the Provider. One already read
-// asks first, since the reading it has can't be made again.
-function renderProcessOffer(d: ApiDocument) {
-  const sec = el("p-process");
-  if (state.enriching.has(d.hash) || state.queued.has(d.hash)) {
-    setHtml(
-      sec,
-      html`<button class="proc-btn" type="button" disabled>Processing…</button>`,
-    );
-    return;
-  }
+/** The Process action's icon, turning while its Document is read. */
+const PROCESS_ICON = html`<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>`;
+
+// What can be done with the open Document, along the foot of the panel. What
+// can't be undone asks first, in the same place. A Document waiting to be read
+// goes straight to the Provider; one already read asks, since the reading it
+// has can't be made again.
+function renderActions(d: ApiDocument) {
+  const bar = el("p-bar");
+  const busy = state.enriching.has(d.hash) || state.queued.has(d.hash);
   const again = d.status === "enriched";
   const label = again ? "Process again" : "Process";
-  if (!state.provider) {
-    setHtml(
-      sec,
-      html`
-      <button class="proc-btn" type="button" disabled>${label}</button>
-      <p class="proc-note">No Provider chosen. <button type="button" class="settings-link">Choose a Provider</button></p>`,
-    );
-    const link = sec.querySelector<HTMLButtonElement>(".settings-link");
-    if (link)
-      link.onclick = () => {
-        closeDoc();
-        openSettings("provider");
-      };
-    return;
+  setHtml(
+    bar,
+    html`
+    ${!busy && !state.provider && html`<p class="proc-note">No Provider chosen. <button type="button" class="settings-link">Choose a Provider</button></p>`}
+    <div class="p-actions">
+      <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
+        Open original
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+      <button class="proc-btn${busy ? " busy" : ""}" type="button">${PROCESS_ICON}${busy ? "Processing…" : label}</button>
+      <button class="del-btn quiet" type="button" aria-label="Delete document">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        <span>Delete</span>
+      </button>
+    </div>`,
+  );
+  const link = bar.querySelector<HTMLButtonElement>(".settings-link");
+  if (link)
+    link.onclick = () => {
+      closeDoc();
+      openSettings("provider");
+    };
+  const process = bar.querySelector<HTMLButtonElement>(".proc-btn");
+  if (process) {
+    process.disabled = busy || !state.provider;
+    process.onclick = () => (again ? renderProcessAsk(d) : processDoc(d));
   }
-  setHtml(sec, html`<button class="proc-btn" type="button">${label}</button>`);
-  const btn = sec.querySelector<HTMLButtonElement>(".proc-btn");
-  if (btn) btn.onclick = () => (again ? renderProcessAsk(d) : processDoc(d));
+  const del = bar.querySelector<HTMLButtonElement>(".del-btn");
+  if (del) del.onclick = () => renderDeleteAsk(d);
 }
 function renderProcessAsk(d: ApiDocument) {
-  const sec = el("p-process");
+  const bar = el("p-bar");
   setHtml(
-    sec,
+    bar,
     html`
     <p class="p-ask">Process again with <strong>${state.provider?.model}</strong>? This replaces the ${d.readBy ? html`result from <strong>${d.readBy}</strong>` : "current result"} and can't be undone.</p>
     <div class="p-actions">
-      <button class="proc-btn confirm" type="button">Process again</button>
+      <button class="proc-btn confirm" type="button">${PROCESS_ICON}Process again</button>
       <button class="proc-btn" type="button">Cancel</button>
     </div>`,
   );
-  const [confirm, cancel] = sec.querySelectorAll<HTMLButtonElement>("button");
+  const [confirm, cancel] = bar.querySelectorAll<HTMLButtonElement>("button");
   if (cancel)
     cancel.onclick = () => {
-      renderProcessOffer(d);
-      sec.querySelector("button")?.focus();
+      renderActions(d);
+      bar.querySelector<HTMLElement>(".proc-btn")?.focus();
     };
   if (confirm) {
     confirm.onclick = () => processDoc(d);
@@ -1318,24 +1324,15 @@ function renderProcessAsk(d: ApiDocument) {
 }
 function processDoc(d: ApiDocument) {
   sendToProvider([d.hash]);
-  renderProcessOffer(d);
+  renderActions(d);
 }
 
-// Delete is permanent — no trash, no undo — so it asks first, in the panel
-// itself, naming what will be gone.
-function renderDeleteOffer(d: ApiDocument) {
-  const sec = el("p-delete");
-  setHtml(
-    sec,
-    html`<button class="del-btn" type="button">Delete document</button>`,
-  );
-  const btn = sec.querySelector<HTMLButtonElement>(".del-btn");
-  if (btn) btn.onclick = () => renderDeleteAsk(d);
-}
+// Delete is permanent — no trash, no undo — so it asks first, naming what will
+// be gone.
 function renderDeleteAsk(d: ApiDocument) {
-  const sec = el("p-delete");
+  const bar = el("p-bar");
   setHtml(
-    sec,
+    bar,
     html`
     <p class="p-ask">Delete <strong>${titleOf(d)}</strong> permanently? This can't be undone.</p>
     <div class="p-actions">
@@ -1343,8 +1340,12 @@ function renderDeleteAsk(d: ApiDocument) {
       <button class="del-btn cancel" type="button">Cancel</button>
     </div>`,
   );
-  const [confirm, cancel] = sec.querySelectorAll<HTMLButtonElement>("button");
-  if (cancel) cancel.onclick = () => renderDeleteOffer(d);
+  const [confirm, cancel] = bar.querySelectorAll<HTMLButtonElement>("button");
+  if (cancel)
+    cancel.onclick = () => {
+      renderActions(d);
+      bar.querySelector<HTMLElement>(".del-btn")?.focus();
+    };
   if (confirm) {
     confirm.onclick = () => deleteDoc(d, confirm);
     confirm.focus();
@@ -1645,7 +1646,7 @@ async function enrichDoc(hash: string) {
   state.errored.delete(hash);
   state.enriching.add(hash);
   render();
-  redrawProcessOffer(hash);
+  redrawActions(hash);
   try {
     const res = await fetch(`/api/documents/${hash}/enrich`, {
       method: "POST",
@@ -1758,7 +1759,7 @@ async function sendToProvider(hashes: string[]) {
     state.queued.clear();
     sending = false;
     render();
-    if (stranded) redrawProcessOffer(stranded);
+    if (stranded) redrawActions(stranded);
   }
 }
 
