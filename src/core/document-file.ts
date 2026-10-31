@@ -63,7 +63,6 @@ type DocumentFile = {
   people: string[] | null;
   deadlines: Deadline[] | null;
   keywords: string[] | null;
-  ref: { key: string; value: string }[] | null;
   enrichment: EnrichmentFile | null;
   transcription: TranscriptionFile | null;
 };
@@ -84,7 +83,6 @@ const DEFAULTS: DocumentFile = {
   people: null,
   deadlines: null,
   keywords: null,
-  ref: null,
   enrichment: null,
   transcription: null,
 };
@@ -117,7 +115,6 @@ function toFile(rec: DocumentRecord): Partial<DocumentFile> {
     people: rec.people,
     deadlines: rec.deadlines,
     keywords: rec.keywords,
-    ref: rec.ref,
     enrichment,
     transcription: t && {
       model: t.model,
@@ -167,7 +164,6 @@ function fromFile(hash: string, file: DocumentFile): DocumentRecord {
     docDate: file.date,
     languages: file.languages,
     keywords: file.keywords,
-    ref: file.ref,
     textSource: e.text_source ?? null,
     enrichProvider: e.provider ?? null,
     enrichBaseUrl: e.base_url ?? null,

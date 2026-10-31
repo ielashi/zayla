@@ -58,7 +58,6 @@ export type DocumentRecord = {
   docDate: string | null;
   languages: string[] | null;
   keywords: string[] | null;
-  ref: { key: string; value: string }[] | null;
   textSource: string | null;
   /**
    * The backend named by an Enrichment made before addresses were recorded.
@@ -183,7 +182,6 @@ export function insertDocument(lib: Library, rec: CatalogFields): boolean {
     docDate: null,
     languages: null,
     keywords: null,
-    ref: null,
     textSource: null,
     enrichProvider: null,
     enrichBaseUrl: null,
@@ -288,7 +286,6 @@ export function updateEnrichment(
     docDate: meta.date,
     languages: meta.languages,
     keywords: meta.keywords,
-    ref: meta.ref,
     sender: meta.sender,
     receiver: meta.receiver,
     deadlines: meta.deadlines,

@@ -20,7 +20,7 @@ export type Deadline = { label: string; date: string };
 
 /**
  * The record the gallery consumes: catalog fields plus extracted metadata
- * (null until enriched). `ref` is flattened to [key, value] pairs for the UI.
+ * (null until enriched).
  * Produced by `toApi` in serve.ts; consumed by frontend.ts.
  */
 export type ApiDocument = {
@@ -37,7 +37,6 @@ export type ApiDocument = {
   languages: string[];
   keywords: string[];
   summary: string | null;
-  ref: [string, string][];
   sender: Party | null;
   receiver: Party | null;
   deadlines: Deadline[];

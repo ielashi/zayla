@@ -156,7 +156,6 @@ test("resetting a password replaces it, leaving passkeys, sessions and Me as the
         date: null,
         languages: [],
         keywords: [],
-        ref: [],
       },
       { textSource: "vision", baseUrl: "http://mock.test/v1", model: "mock" },
     );

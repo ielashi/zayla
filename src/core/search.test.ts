@@ -37,7 +37,6 @@ const EMPTY: EnrichedMetadata = {
   date: null,
   languages: [],
   keywords: [],
-  ref: [],
 };
 
 /** File a Document and read it as a model would have, Transcription and all. */

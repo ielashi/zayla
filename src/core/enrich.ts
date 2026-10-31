@@ -40,8 +40,6 @@ export type EnrichedMetadata = {
    * they exist only to be matched by the search box.
    */
   keywords: string[];
-  /** Key facts to surface (application no., validity, etc.). */
-  ref: { key: string; value: string }[];
 };
 
 /** A Document's title and summary in one language. */
@@ -114,8 +112,7 @@ const jsonShape = (codes: string[]) => {
 - date: ISO "yyyy-mm-dd" string, or null
 - languages: array of uppercase language codes (e.g. "DE", "EN", "AR")
 - keywords: array of search terms, per the keyword rule above
-- summary: ${keyed("the summary")}
-- ref: array of objects, each { "key": string, "value": string }`;
+- summary: ${keyed("the summary")}`;
 };
 
 /** Marks where the metadata JSON ends and the transcription begins in a model response. */
@@ -330,17 +327,6 @@ export function parseMetadata(
           date: String(d.date ?? ""),
         }))
     : [];
-  const ref = Array.isArray(raw.ref)
-    ? (raw.ref as unknown[])
-        .filter(
-          (r): r is { key: unknown; value: unknown } =>
-            typeof r === "object" && r !== null,
-        )
-        .map((r) => ({
-          key: String(r.key ?? ""),
-          value: String(r.value ?? ""),
-        }))
-    : [];
   return {
     texts: textsOf(raw.title, raw.summary, readingLanguages[0]),
     people: arr(raw.people),
@@ -350,7 +336,6 @@ export function parseMetadata(
     date: typeof raw.date === "string" && raw.date ? raw.date : null,
     languages: arr(raw.languages).map((l) => l.toUpperCase()),
     keywords: arr(raw.keywords),
-    ref,
   };
 }
 

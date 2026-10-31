@@ -1170,7 +1170,6 @@ function drawPanel(d: ApiDocument) {
       ),
     ]);
   if (d.languages?.length) kv.push(["Languages", d.languages.join(", ")]);
-  for (const [k, v] of d.ref || []) kv.push([String(k), String(v)]);
 
   setHtml(
     panel,
