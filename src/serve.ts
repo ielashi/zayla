@@ -99,7 +99,7 @@ function apiProviderOf(lib: Library, userId: string): ApiProvider | null {
  * Shape the stored record into the wire contract the gallery consumes
  * (`ApiDocument`, defined in shared.ts), for a user who reads in these
  * languages: of the titles and summaries the Document has, it carries the one
- * that user is shown. `ref` is flattened to [key, value] pairs for the UI.
+ * that user is shown.
  */
 function toApi(
   d: DocumentRecord,
@@ -122,7 +122,6 @@ function toApi(
     languages: d.languages ?? [],
     keywords: d.keywords ?? [],
     summary: shown?.summary || null,
-    ref: (d.ref ?? []).map((r) => [r.key, r.value]),
     sender: d.sender,
     receiver: d.receiver,
     deadlines: d.deadlines ?? [],

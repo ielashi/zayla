@@ -63,7 +63,6 @@ const READING: EnrichedMetadata = {
   date: "2026-02-15",
   languages: ["DE"],
   keywords: ["mietvertrag", "kaution"],
-  ref: [{ key: "Contract no.", value: "MV-2026-17" }],
 };
 
 const provider = (

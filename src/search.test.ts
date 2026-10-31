@@ -18,7 +18,6 @@ function doc(over: Partial<ApiDocument> = {}): ApiDocument {
     languages: [],
     keywords: [],
     summary: null,
-    ref: [],
     sender: null,
     receiver: null,
     deadlines: [],

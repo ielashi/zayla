@@ -46,7 +46,6 @@ const EMPTY_META: EnrichedMetadata = {
   date: null,
   languages: [],
   keywords: [],
-  ref: [],
 };
 
 /** A hand-written provider whose reading names exactly these parties. */

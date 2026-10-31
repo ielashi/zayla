@@ -50,7 +50,6 @@ test("parseMetadata: normalizes a well-formed response", () => {
       languages: ["en", "fr"],
       keywords: ["aufenthaltstitel", "type d"],
       summary: "A national residence visa.",
-      ref: [{ key: "Visa no.", value: "D-2048817" }],
     }),
   );
   expect(meta.keywords).toEqual(["aufenthaltstitel", "type d"]);
@@ -64,14 +63,19 @@ test("parseMetadata: normalizes a well-formed response", () => {
   expect(meta.deadlines).toEqual([
     { label: "Register residence", date: "2026-06-30" },
   ]);
-  expect(meta.ref).toEqual([{ key: "Visa no.", value: "D-2048817" }]);
+});
+
+test("parseMetadata: reference details a model volunteers are ignored", () => {
+  const meta = parseMetadata(
+    JSON.stringify({ ref: [{ key: "Visa no.", value: "D-2048817" }] }),
+  );
+  expect(meta).not.toHaveProperty("ref");
 });
 
 test("parseMetadata: missing fields default sensibly", () => {
   const meta = parseMetadata(JSON.stringify({ title: "X" }));
   expect(meta.people).toEqual([]);
   expect(meta.keywords).toEqual([]);
-  expect(meta.ref).toEqual([]);
   expect(meta.sender).toEqual({ organization: "", person: "" });
   expect(meta.receiver).toEqual({ organization: "", person: "" });
   expect(meta.deadlines).toEqual([]);
@@ -245,7 +249,6 @@ test("enrichDocument: hands the stored file to the provider and stores its metad
             date: null,
             languages: [],
             keywords: [],
-            ref: [],
           },
           transcription: null,
           finishReason: null,
@@ -329,7 +332,6 @@ const EMPTY_META: EnrichedMetadata = {
   date: null,
   languages: [],
   keywords: [],
-  ref: [],
 };
 
 /** A provider that reads back exactly this, so a test can assert on what got stored. */
@@ -937,6 +939,7 @@ test("enrichDocument: the prompt asks, by name, for a title and summary in each 
     // Keywords and the Transcription stay in the Document's own language.
     expect(system).toContain("original language");
     expect(system).toContain("Do not translate");
+    expect(system).not.toContain("- ref:");
   } finally {
     closeLibrary(lib);
     server.stop(true);

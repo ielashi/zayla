@@ -64,7 +64,6 @@ const EMPTY: EnrichedMetadata = {
   date: null,
   languages: [],
   keywords: [],
-  ref: [],
 };
 
 const catalog = (hash: string): CatalogFields => ({
@@ -102,6 +101,31 @@ const idOf = (lib: Library, name: string): number => {
   if (!found) throw new Error(`no entity displayed as ${name}`);
   return found.id;
 };
+
+test("a Document's file with reference details still reads, and loses them when next written", async () => {
+  const hash = "a".repeat(64);
+  const path = `${TMP}/about/${hash}/document.yaml`;
+  let lib = openLibrary(TMP, { writer: "test" });
+  try {
+    read(lib, hash, { people: ["Jordan Okafor"] });
+    await Bun.write(
+      path,
+      `${readFileSync(path, "utf8")}ref:\n  - key: Visa no.\n    value: D-2048817\n`,
+    );
+
+    lib = reopen(lib);
+
+    expect(lib.documents.get(hash)?.people).toEqual(["Jordan Okafor"]);
+    updateEnrichment(lib, hash, EMPTY, {
+      textSource: "vision",
+      baseUrl: "http://mock.test/v1",
+      model: "mock",
+    });
+    expect(parse(readFileSync(path, "utf8"))).not.toHaveProperty("ref");
+  } finally {
+    closeLibrary(lib);
+  }
+});
 
 test("users come back from their files with everything they had", async () => {
   let lib = openLibrary(TMP, { writer: "test" });

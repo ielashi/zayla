@@ -570,10 +570,6 @@ function printDocument(d: DocumentRecord, languages: string[]): void {
     row("keywords", list(d.keywords));
     row("summary", shownText(d, languages)?.summary || "—");
     row("written in", list(Object.keys(d.texts)));
-    if (d.ref?.length) {
-      console.log("  key facts");
-      for (const { key, value } of d.ref) console.log(`    ${key}: ${value}`);
-    }
     console.log();
     row(
       "via",

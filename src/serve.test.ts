@@ -878,7 +878,6 @@ function read(
       date: null,
       languages: [],
       keywords: [],
-      ref: [],
     },
     { textSource: "vision", baseUrl: "http://mock.test/v1", model: "mock" },
   );
