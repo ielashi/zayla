@@ -5,8 +5,6 @@
 Drop in your letters, bills, contracts, IDs and handwritten notes, and find any
 of them in seconds, whatever language they're in.
 
-[Install with Docker](#install-with-docker)
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/hero-dark.webp">
   <img src="docs/screenshots/hero-light.webp" alt="Scanned letters and bills in Zayla on a desktop and a phone">
