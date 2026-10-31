@@ -159,7 +159,7 @@ const toApiEntity = (e: {
 /**
  * Answer a statement about naming the Library would not make: a Merge it
  * refuses, or a Person it will not call Me. A refusal is the request's fault
- * and carries the domain's own words for the page that asked to show; anything
+ * and carries its reason in words the page that asked can show; anything
  * else is the Library failing to answer, which is not something the owner did
  * and is not reported to them as though it were.
  */
@@ -411,8 +411,8 @@ export function startServer(port: number, lib: Library) {
       // A refusal comes back as 400 carrying the reason the domain gives: two
       // names of different kinds, two names already one, a spelling a third
       // name holds, an id that is nobody's. The dialog that asked shows what it
-      // says, so the owner reads the Library's own words rather than a status
-      // code's — and a Library that failed to answer is a 500, not a reason the
+      // says, so the owner reads a reason rather than a status code —
+      // and a Library that failed to answer is a 500, not a reason the
       // owner's request was wrong.
       "/api/merges": {
         POST: async (req) => {
@@ -481,8 +481,8 @@ export function startServer(port: number, lib: Library) {
       // An id that is nobody's is nothing here, exactly as it is on the way in
       // — the address of a page the Library does not have. An id that names
       // something it cannot be is a different answer: the address is real, and
-      // what it was asked to do is what could not be done, so it is refused in
-      // the domain's own words, by the one rule every refusal comes through.
+      // what it was asked to do is what could not be done, so it is refused
+      // with a reason, by the one rule every refusal comes through.
       "/api/entities/:id/me": {
         POST: (req) => {
           const user = requireAuth(lib, req);

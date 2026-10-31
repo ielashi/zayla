@@ -55,9 +55,9 @@ export function destinationFrom(
       zeroRetention: body.zeroRetention !== false,
     };
   if (body?.kind !== undefined && body.kind !== "custom")
-    return { error: "a Provider is either OpenRouter or Custom" };
+    return { error: "a provider is either OpenRouter or Custom" };
   const baseUrl = httpAddress(body?.baseUrl);
-  if (!baseUrl) return { error: "a Custom Provider needs an http(s) address" };
+  if (!baseUrl) return { error: "a Custom provider needs an http(s) address" };
   if (isOpenRouterAddress(baseUrl))
     return { error: "that is OpenRouter's address: choose OpenRouter instead" };
   return { kind: "custom", baseUrl, zeroRetention: false };
@@ -72,7 +72,7 @@ export function namedProvider(
   const model = typeof body?.model === "string" ? body.model.trim() : "";
   return model
     ? { ...destination, model }
-    : { error: "a Provider needs a model" };
+    : { error: "a provider needs a model" };
 }
 
 /** The answer to a body that names nowhere to list models. */

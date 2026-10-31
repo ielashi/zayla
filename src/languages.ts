@@ -56,17 +56,18 @@ export function readingLanguagesFrom(
   value: unknown,
 ): { languages: string[] } | { error: string } {
   if (!Array.isArray(value) || value.length === 0)
-    return { error: "choose at least one Reading language" };
+    return { error: "choose at least one language" };
   if (value.length > MAX_READING_LANGUAGES)
     return {
-      error: `choose at most ${MAX_READING_LANGUAGES} Reading languages`,
+      error: `choose at most ${MAX_READING_LANGUAGES} languages`,
     };
   const languages: string[] = [];
   for (const v of value) {
     const code = typeof v === "string" ? v.trim().toUpperCase() : "";
     if (!LANGUAGE_CODES.includes(code))
       return { error: `not an ISO 639-1 language: ${String(v)}` };
-    if (languages.includes(code)) return { error: `${code} is chosen twice` };
+    if (languages.includes(code))
+      return { error: `${languageName(code)} is chosen twice` };
     languages.push(code);
   }
   return { languages };

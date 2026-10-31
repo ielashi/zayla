@@ -518,7 +518,7 @@ function keyAt(saved: SavedProvider | null, baseUrl: string): string | null {
 /** Raised when a Document would be read but there is no Provider to read it. */
 export class NoProvider extends Error {
   constructor() {
-    super("there is no Provider to read the Documents");
+    super("there is no provider to read the documents");
   }
 }
 
@@ -613,7 +613,7 @@ export async function enrichDocument(
   if (transcription) writeTranscription(lib.root, doc.hash, transcription);
   else if (readTranscriptionSync(lib.root, doc.hash))
     throw new Error(
-      "the model returned no Transcription, so this Document was left as it was",
+      "the model returned no text, so this document was left as it was",
     );
   updateEnrichment(
     lib,

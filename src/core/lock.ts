@@ -25,7 +25,7 @@ export type WriterLock = { release(): void };
 /** Another writer holds the Library's lock. */
 export class LibraryLocked extends Error {
   constructor(readonly holder: LockHolder) {
-    super(`the Library is held by ${holder.by} (process ${holder.pid})`);
+    super(`the library is held by ${holder.by} (process ${holder.pid})`);
   }
 }
 
