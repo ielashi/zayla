@@ -71,8 +71,10 @@ some are marked as tested, and the rest are offered without that promise. When a
 and summary are written in each of its user's reading languages. Which one is
 shown is the Document's own language if it is one of them, else the first,
 else whatever the Document has. Changing reading languages never re-reads
-anything, and removing one discards nothing already written in it. Keywords
-and the Transcription stay in the Document's own language regardless.
+anything, and removing one discards nothing already written in it — until the
+Document is next read, when its titles and summaries are replaced by those in
+the reading languages of the user who asked. Keywords and the Transcription
+stay in the Document's own language regardless.
 _Avoid_: Locale, display language, UI language, target language
 
 **Transcription**:
@@ -152,6 +154,16 @@ _Avoid_: Self, account, profile, user
 Adding a Document to the Library. Importing content the Library already holds
 changes nothing, because identity is the content.
 _Avoid_: Upload, ingest, add
+
+**Re-Enrich**:
+Deliberately replacing a Document's Enrichment with a new reading, made by the
+Provider of the user who asked and in their reading languages. The reading it
+replaces is gone, so it is confirmed first, naming the model that made it. A
+reading that fails, or that brings back no Transcription where the Document had
+one, replaces nothing. The interface calls Enriching "processing", and
+Re-Enriching "processing again"; those are its words for people, not other
+concepts.
+_Avoid_: Refresh, redo, retry, reprocess
 
 **Delete**:
 Permanently removing a Document — its place in the Library, its Original, its

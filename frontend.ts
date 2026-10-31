@@ -538,7 +538,7 @@ const nobodyYet = () =>
 /** Why both lists are empty, in one place so the two cannot drift apart. */
 const NOBODY_YET = [
   "Nobody yet",
-  "Enriching a document records who it involves. Add some documents and the people and organizations they name will be listed here.",
+  "Processing a document records who it involves. Add some documents and the people and organizations they name will be listed here.",
 ] as const;
 
 function renderOrganizations() {
@@ -634,13 +634,13 @@ function documentCard(d: ApiDocument): HTMLButtonElement {
     .filter(Boolean)
     .join(" → ");
   const overlay = enriching
-    ? html`<div class="working"><div class="spinner"></div>Enriching…</div>`
+    ? html`<div class="working"><div class="spinner"></div>Processing…</div>`
     : errored
-      ? html`<div class="working err"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Enrich failed<br><span class="retry-hint">click to retry</span></span></div>`
+      ? html`<div class="working err"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Processing failed<br><span class="retry-hint">click to retry</span></span></div>`
       : queued
-        ? html`<div class="working wait">Queued to be read</div>`
+        ? html`<div class="working wait">Queued to be processed</div>`
         : waiting &&
-          html`<div class="working wait"><span>Waiting to be read${!state.provider && html`<br><span class="retry-hint">no Provider chosen</span>`}</span></div>`;
+          html`<div class="working wait"><span>Waiting to be processed${!state.provider && html`<br><span class="retry-hint">no Provider chosen</span>`}</span></div>`;
   // Found only through its Transcription: nothing else on the card says why it
   // is here, so the passage that matched takes the summary's place.
   const snippet = hitFor(d.hash)?.snippet;
@@ -679,8 +679,8 @@ function renderDocuments(list: ApiDocument[]) {
     setHtml(
       view,
       state.provider
-        ? html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are imported and enriched automatically.</p></div>`
-        : html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are filed straight away, and read once you <button type="button" class="settings-link">choose a Provider in Settings</button>.</p></div>`,
+        ? html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are imported and processed automatically.</p></div>`
+        : html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are filed straight away, and processed once you <button type="button" class="settings-link">choose a Provider in Settings</button>.</p></div>`,
     );
     return;
   }
@@ -710,8 +710,8 @@ function waitingNotice(): HTMLElement[] {
   setHtml(
     notice,
     state.provider
-      ? html`<span>${n} ${documentWord(n)} waiting to be read by ${state.provider.model}.</span><button type="button" class="read-waiting">Read them now</button>`
-      : html`<span>${n} ${documentWord(n)} waiting to be read. No Provider has been chosen to read them.</span><button type="button" class="settings-link">Choose a Provider</button>`,
+      ? html`<span>${n} ${documentWord(n)} waiting to be processed by ${state.provider.model}.</span><button type="button" class="read-waiting">Process them now</button>`
+      : html`<span>${n} ${documentWord(n)} waiting to be processed. No Provider has been chosen to process them.</span><button type="button" class="settings-link">Choose a Provider</button>`,
   );
   return [notice];
 }
@@ -1131,10 +1131,23 @@ let openHash: string | null = null;
 function openDoc(d: ApiDocument) {
   lastFocus = document.activeElement;
   openHash = d.hash;
-  const panel = el("panel");
-
+  drawPanel(d);
   const pages = pagesHtml(d);
-  const hasPreview = pages !== null;
+  const viewer = el("viewer");
+  if (pages) setHtml(viewer, pages);
+  else viewer.replaceChildren();
+  viewer.scrollTop = 0;
+  const scrim = el("scrim");
+  scrim.scrollTop = 0; // a phone's sheet scrolls as a whole, from the first page
+  scrim.classList.toggle("has-preview", pages !== null);
+  scrim.classList.add("shown");
+  el("panel").querySelector<HTMLButtonElement>(".p-close")?.focus();
+}
+
+/** What the panel says about a Document: drawn on opening, and again when it is read. */
+function drawPanel(d: ApiDocument) {
+  const panel = el("panel");
+  const hasPreview = pagesHtml(d) !== null;
 
   const fmtParty = (p: Party | null) =>
     p && (p.organization || p.person)
@@ -1177,30 +1190,15 @@ function openDoc(d: ApiDocument) {
         <dt>Format</dt><dd>${d.mime}</dd>
         <dt>Size</dt><dd class="mono">${fmtSize(d.bytes)}</dd>
         <dt>Added</dt><dd>${fmtDate(d.addedAt)}</dd>
-        <dt>Status</dt><dd>${d.status}</dd>
+        <dt>Status</dt><dd>${d.status === "enriched" ? "Processed" : "Waiting to be processed"}</dd>
       </dl>
       <div class="p-file">${d.filename} · ${d.hash.slice(0, 16)}…</div>
     </div>
-    <div class="p-sec p-open">
-      <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
-        Open original
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
-      </a>
-    </div>
-    <div class="p-sec" id="p-delete"></div>`,
+    <div class="p-bar" id="p-bar"></div>`,
   );
   const closeBtn = panel.querySelector<HTMLButtonElement>(".p-close");
   if (closeBtn) closeBtn.onclick = closeDoc;
-  renderDeleteOffer(d);
-  const viewer = el("viewer");
-  if (pages) setHtml(viewer, pages);
-  else viewer.replaceChildren();
-  viewer.scrollTop = 0;
-  const scrim = el("scrim");
-  scrim.scrollTop = 0; // a phone's sheet scrolls as a whole, from the first page
-  scrim.classList.toggle("has-preview", hasPreview);
-  scrim.classList.add("shown");
-  closeBtn?.focus();
+  renderActions(d);
 }
 /**
  * A Document's pages for the viewer, as images the server rendered: the same
@@ -1230,30 +1228,124 @@ function missingPage(page: HTMLElement, hash: string) {
   );
 }
 
-// Delete is permanent — no trash, no undo — so it asks first, in the panel
-// itself, naming what will be gone.
-function renderDeleteOffer(d: ApiDocument) {
-  const sec = el("p-delete");
-  setHtml(
-    sec,
-    html`<button class="del-btn" type="button">Delete document</button>`,
-  );
-  const btn = sec.querySelector<HTMLButtonElement>(".del-btn");
-  if (btn) btn.onclick = () => renderDeleteAsk(d);
+/** The open Document, if it is this one and is still in the Library. */
+const openDocument = (hash: string) =>
+  openHash === hash ? state.docs.find((d) => d.hash === hash) : undefined;
+
+/**
+ * Bring the actions up to date, if this Document is the open one. A question
+ * being asked stays: its answer redraws them.
+ */
+function redrawActions(hash: string) {
+  const d = openDocument(hash);
+  if (d && !el("p-bar").querySelector(".confirm")) renderActions(d);
 }
-function renderDeleteAsk(d: ApiDocument) {
-  const sec = el("p-delete");
+
+/**
+ * Show a finished reading, if this Document is the open one. The button that
+ * had focus was disabled while it read, so focus returns to the action, unless
+ * it has since moved outside the panel.
+ */
+function redrawPanel(hash: string) {
+  const d = openDocument(hash);
+  if (!d) return;
+  const active = document.activeElement;
+  const focusHere = active === document.body || el("panel").contains(active);
+  const askingDelete = el("p-bar").querySelector(".del-btn.confirm") !== null;
+  drawPanel(d);
+  if (askingDelete) renderDeleteAsk(d);
+  else if (focusHere)
+    el("p-bar").querySelector<HTMLElement>(".proc-btn")?.focus();
+}
+
+/** The Process action's icon, turning while its Document is read. */
+const PROCESS_ICON = html`<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>`;
+
+// What can be done with the open Document, along the foot of the panel. What
+// can't be undone asks first, in the same place. A Document waiting to be read
+// goes straight to the Provider; one already read asks, since the reading it
+// has can't be made again.
+function renderActions(d: ApiDocument) {
+  const bar = el("p-bar");
+  const busy = state.enriching.has(d.hash) || state.queued.has(d.hash);
+  const again = d.status === "enriched";
+  const label = again ? "Process again" : "Process";
   setHtml(
-    sec,
+    bar,
     html`
-    <p class="del-ask">Delete <strong>${titleOf(d)}</strong> permanently? This can't be undone.</p>
-    <div class="del-actions">
+    ${!busy && !state.provider && html`<p class="proc-note">No Provider chosen. <button type="button" class="settings-link">Choose a Provider</button></p>`}
+    <div class="p-actions">
+      <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
+        Open original
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+      <button class="proc-btn${busy ? " busy" : ""}" type="button">${PROCESS_ICON}${busy ? "Processing…" : label}</button>
+      <button class="del-btn quiet" type="button" aria-label="Delete document">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        <span>Delete</span>
+      </button>
+    </div>`,
+  );
+  const link = bar.querySelector<HTMLButtonElement>(".settings-link");
+  if (link)
+    link.onclick = () => {
+      closeDoc();
+      openSettings("provider");
+    };
+  const process = bar.querySelector<HTMLButtonElement>(".proc-btn");
+  if (process) {
+    process.disabled = busy || !state.provider;
+    process.onclick = () => (again ? renderProcessAsk(d) : processDoc(d));
+  }
+  const del = bar.querySelector<HTMLButtonElement>(".del-btn");
+  if (del) del.onclick = () => renderDeleteAsk(d);
+}
+function renderProcessAsk(d: ApiDocument) {
+  const bar = el("p-bar");
+  setHtml(
+    bar,
+    html`
+    <p class="p-ask">Process again with <strong>${state.provider?.model}</strong>? This replaces the ${d.readBy ? html`result from <strong>${d.readBy}</strong>` : "current result"} and can't be undone.</p>
+    <div class="p-actions">
+      <button class="proc-btn confirm" type="button">${PROCESS_ICON}Process again</button>
+      <button class="proc-btn" type="button">Cancel</button>
+    </div>`,
+  );
+  const [confirm, cancel] = bar.querySelectorAll<HTMLButtonElement>("button");
+  if (cancel)
+    cancel.onclick = () => {
+      renderActions(d);
+      bar.querySelector<HTMLElement>(".proc-btn")?.focus();
+    };
+  if (confirm) {
+    confirm.onclick = () => processDoc(d);
+    confirm.focus();
+  }
+}
+function processDoc(d: ApiDocument) {
+  sendToProvider([d.hash]);
+  renderActions(d);
+}
+
+// Delete is permanent — no trash, no undo — so it asks first, naming what will
+// be gone.
+function renderDeleteAsk(d: ApiDocument) {
+  const bar = el("p-bar");
+  setHtml(
+    bar,
+    html`
+    <p class="p-ask">Delete <strong>${titleOf(d)}</strong> permanently? This can't be undone.</p>
+    <div class="p-actions">
       <button class="del-btn confirm" type="button">Delete</button>
       <button class="del-btn cancel" type="button">Cancel</button>
     </div>`,
   );
-  const [confirm, cancel] = sec.querySelectorAll<HTMLButtonElement>("button");
-  if (cancel) cancel.onclick = () => renderDeleteOffer(d);
+  const [confirm, cancel] = bar.querySelectorAll<HTMLButtonElement>("button");
+  if (cancel)
+    cancel.onclick = () => {
+      renderActions(d);
+      bar.querySelector<HTMLElement>(".del-btn")?.focus();
+    };
   if (confirm) {
     confirm.onclick = () => deleteDoc(d, confirm);
     confirm.focus();
@@ -1554,6 +1646,7 @@ async function enrichDoc(hash: string) {
   state.errored.delete(hash);
   state.enriching.add(hash);
   render();
+  redrawActions(hash);
   try {
     const res = await fetch(`/api/documents/${hash}/enrich`, {
       method: "POST",
@@ -1582,11 +1675,15 @@ async function enrichDoc(hash: string) {
     // involves has changed: the lists and the shortcuts are now out of date.
     await reloadBrowse();
   } catch (err) {
-    state.errored.add(hash);
-    toast(`Couldn't enrich: ${(err as Error).message}`, true);
+    // A Document already read keeps its reading, so its card has nothing to
+    // retry: only one with no reading has failed.
+    const doc = state.docs.find((d) => d.hash === hash);
+    if (doc?.status !== "enriched") state.errored.add(hash);
+    toast(`Couldn't process: ${(err as Error).message}`, true);
   } finally {
     state.enriching.delete(hash);
     render();
+    redrawPanel(hash);
   }
 }
 
@@ -1642,10 +1739,9 @@ let sending = false;
 
 /**
  * Queue Documents to be read, and read the queue one at a time — sequential is
- * gentle on the API. Uploads and "Read
- * them now" share the one queue, so a Document is never sent twice however the
- * two overlap. If the Provider is cleared meanwhile, what is left goes back to
- * waiting.
+ * gentle on the API. Uploads, "Process them now" and the panel's Process share
+ * the one queue, so a Document is never sent twice however they overlap. If the
+ * Provider is cleared meanwhile, what is left goes back to waiting.
  */
 async function sendToProvider(hashes: string[]) {
   for (const h of hashes) if (!state.enriching.has(h)) state.queued.add(h);
@@ -1659,9 +1755,11 @@ async function sendToProvider(hashes: string[]) {
       await enrichDoc(hash);
     }
   } finally {
+    const stranded = openHash && state.queued.has(openHash) ? openHash : null;
     state.queued.clear();
     sending = false;
     render();
+    if (stranded) redrawActions(stranded);
   }
 }
 
@@ -1821,7 +1919,7 @@ function fillWaiting() {
   provWaiting.hidden = !state.provider || n === 0;
   setHtml(
     provWaiting,
-    html`<span>${n} ${documentWord(n)} waiting to be read.</span><button type="button" id="prov-read">Read them now</button>`,
+    html`<span>${n} ${documentWord(n)} waiting to be processed.</span><button type="button" id="prov-read">Process them now</button>`,
   );
 }
 
@@ -1995,7 +2093,9 @@ el("settings-form").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     state.provider = ((await res.json()) as { provider: ApiProvider }).provider;
     fillSettings();
-    setProvStatus(`Saved. Documents are now read by ${state.provider.model}.`);
+    setProvStatus(
+      `Saved. Documents are now processed by ${state.provider.model}.`,
+    );
     render();
   } catch (err) {
     setProvStatus((err as Error).message, true);
@@ -2010,7 +2110,7 @@ provClear.addEventListener("click", async () => {
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     state.provider = null;
     fillSettings();
-    setProvStatus("Cleared. New Documents will wait to be read.");
+    setProvStatus("Cleared. New Documents will wait to be processed.");
     render();
   } catch (err) {
     setProvStatus((err as Error).message, true);
@@ -2106,7 +2206,7 @@ el("lang-form").addEventListener("submit", async (e) => {
     const saved = (await res.json()) as { languages: string[] };
     showLanguages(saved.languages);
     setLangStatus(
-      `Saved. Documents read from now on are written in ${saved.languages.map(languageName).join(", ")}.`,
+      `Saved. Documents processed from now on are written in ${saved.languages.map(languageName).join(", ")}.`,
     );
     load();
   } catch (err) {

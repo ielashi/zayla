@@ -22,6 +22,7 @@ function doc(over: Partial<ApiDocument> = {}): ApiDocument {
     sender: null,
     receiver: null,
     deadlines: [],
+    readBy: null,
     pages: 1,
     ...over,
   };
