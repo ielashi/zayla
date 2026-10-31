@@ -77,6 +77,7 @@ type ApiItem = {
   mime: string;
   status: string;
   deduped: boolean;
+  readBy: string | null;
 };
 const asItems = (v: unknown) => v as ApiItem[];
 
@@ -2202,6 +2203,35 @@ test("a Document is read by the Provider the Library chose", async () => {
   }
 });
 
+test("a Document says which model made the reading it has, and a new reading replaces it", async () => {
+  const models = fakeModelServer();
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const hash = await importDocument(server, cookie);
+    const read = async (model: string) => {
+      await chooseProvider(server, cookie, { baseUrl: models.baseUrl, model });
+      const res = await fetch(`${base(server)}/api/documents/${hash}/enrich`, {
+        method: "POST",
+        headers: { cookie },
+      });
+      return (await res.json()) as ApiDocument;
+    };
+
+    const listed = asItems(
+      await (
+        await fetch(`${base(server)}/api/documents`, { headers: { cookie } })
+      ).json(),
+    );
+    expect(listed[0]?.readBy).toBeNull();
+    expect((await read("gemma")).readBy).toBe("gemma");
+    expect((await read("qwen")).readBy).toBe("qwen");
+  } finally {
+    server.stop(true);
+    models.server.stop(true);
+  }
+});
+
 test("each user chooses their own Provider, and never sees another's", async () => {
   const server = startServer(0, library);
   try {
@@ -2651,10 +2681,6 @@ test("reading a Document again replaces what it can be found by", async () => {
     });
     expect(await found(lib, "lindenhof")).toEqual([d]);
     expect(await found(lib, "nordhaus")).toEqual([]);
-
-    // A reading that comes back with no Transcription leaves none to match.
-    await lib.read(d, { meta: { title: "Invoice" } });
-    expect(await found(lib, "lindenhof")).toEqual([]);
   } finally {
     lib.stop();
   }

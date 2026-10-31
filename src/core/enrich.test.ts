@@ -387,15 +387,22 @@ test("enrichDocument: a provider that reads back nothing stores no transcription
   }
 });
 
-test("enrichDocument: a re-reading that comes back empty clears the old transcription", async () => {
+test("enrichDocument: a re-reading with no transcription fails and leaves the Document's reading whole", async () => {
   const lib = openLibrary(TMP);
   try {
     const doc = catalogued(lib, "e".repeat(64));
-    await enrichDocument(lib, doc, providerReading("Rechnung Nr. 4711"));
+    const first: EnrichmentProvider = {
+      ...providerReading("Rechnung Nr. 4711"),
+      model: "first",
+    };
+    await enrichDocument(lib, doc, first);
 
-    await enrichDocument(lib, doc, providerReading(null));
+    await expect(
+      enrichDocument(lib, doc, providerReading(null)),
+    ).rejects.toThrow("no Transcription");
 
-    expect(await readTranscription(TMP, doc.hash)).toBeNull();
+    expect(await readTranscription(TMP, doc.hash)).toBe("Rechnung Nr. 4711");
+    expect(getDocument(lib, doc.hash)?.enrichModel).toBe("first");
   } finally {
     closeLibrary(lib);
   }

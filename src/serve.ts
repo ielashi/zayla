@@ -126,6 +126,7 @@ function toApi(
     sender: d.sender,
     receiver: d.receiver,
     deadlines: d.deadlines ?? [],
+    readBy: d.enrichModel ?? d.enrichProvider,
     pages,
   };
 }

@@ -45,10 +45,7 @@ export function writeTranscription(
   writeAtomicSync(transcriptionPath(root, hash), text);
 }
 
-/**
- * Drop a document's Transcription, so a re-reading that came back empty cannot
- * leave an earlier model's text behind under the new model's name.
- */
+/** Drop a Document's Transcription, as Deleting it does. */
 export function removeTranscription(root: string, hash: string): void {
   rmSync(transcriptionPath(root, hash), { force: true });
 }

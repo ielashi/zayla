@@ -7,7 +7,7 @@ import { documentFileExists } from "./document-file.ts";
 import { objectPath } from "./library.ts";
 import { openRouterAddress } from "./openrouter.ts";
 import { shownText } from "./reading-languages.ts";
-import { removeTranscription, writeTranscription } from "./transcription.ts";
+import { readTranscriptionSync, writeTranscription } from "./transcription.ts";
 
 export type { Deadline, Party };
 
@@ -596,9 +596,9 @@ export type EnrichOutcome =
  * The transcription is written before the Document's `document.yaml` flips to
  * 'enriched', so an enriched Document always has its transcription on disk. A
  * crash in between leaves the document 'imported', to be re-enriched and
- * overwritten. A
- * re-run that reads nothing back clears the old transcription rather than leaving
- * one model's text filed under another's name.
+ * overwritten. A re-run that reads nothing back fails and replaces nothing: the
+ * Transcription can't be kept under the new reading's name, and dropping it
+ * would lose the Document's words from search.
  *
  * The reading's Appearances are recorded last, and replace the Document's
  * previous ones: a second reading of one Document is still one Document, so a
@@ -626,7 +626,10 @@ export async function enrichDocument(
   if (!getDocument(lib, doc.hash) || !documentFileExists(lib.root, doc.hash))
     return { hash: doc.hash, status: "deleted", costUsd };
   if (transcription) writeTranscription(lib.root, doc.hash, transcription);
-  else removeTranscription(lib.root, doc.hash);
+  else if (readTranscriptionSync(lib.root, doc.hash))
+    throw new Error(
+      "the model returned no Transcription, so this Document was left as it was",
+    );
   updateEnrichment(
     lib,
     doc.hash,

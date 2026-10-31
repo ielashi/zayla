@@ -297,6 +297,12 @@
   .open { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--on-accent); background: var(--accent); text-decoration: none; padding: 10px 16px; border-radius: 9px; transition: background .15s ease; }
   .open:hover { background: var(--accent-hover); }
   .open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .proc-btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--ink); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 13px; cursor: pointer; transition: border-color .12s ease; }
+  .proc-btn:hover:not(:disabled) { border-color: var(--ink-faint); }
+  .proc-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .proc-btn.confirm { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+  .proc-btn:disabled { opacity: .6; cursor: default; }
+  .proc-note { font-size: 13px; color: var(--ink-soft); margin: 10px 0 0; }
   .del-btn { font: inherit; font-size: 13px; font-weight: 500; color: var(--danger); background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 13px; cursor: pointer; transition: border-color .12s ease; }
   .del-btn:hover { border-color: var(--danger); }
   .del-btn:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
@@ -304,8 +310,8 @@
   .del-btn.cancel { color: var(--ink-soft); }
   .del-btn.cancel:hover { border-color: var(--ink-faint); color: var(--ink); }
   .del-btn:disabled { opacity: .6; cursor: default; }
-  .del-ask { font-size: 14px; color: var(--ink); margin: 0 0 12px; }
-  .del-actions { display: flex; gap: 8px; }
+  .p-ask { font-size: 14px; color: var(--ink); margin: 0 0 12px; }
+  .p-actions { display: flex; gap: 8px; }
 
   .add-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--on-accent); background: var(--accent); border: 0; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: background .15s ease; }
   .add-btn:hover { background: var(--accent-hover); }
@@ -538,7 +544,7 @@
        every field set at 16px, below which iOS zooms the page on focus. Last in
        the sheet, so it wins over the rules each control is styled by above. */
     .ent, .ep-alike li a { display: flex; align-items: center; min-height: 44px; }
-    .add-btn, .logout-btn, select, .search input, .ep-same, .me-btn, .ep-undo, .open, .del-btn,
+    .add-btn, .logout-btn, select, .search input, .ep-same, .me-btn, .ep-undo, .open, .del-btn, .proc-btn,
     .same-as select, .same-as input, .same-as-row button, .prov-aside, #prov-clear, .settings-tabs button,
     .prov-waiting button, .waiting-notice button, .gate-btn, .gate-pw input, .setup-step input,
     .setup-step select, .setup-back, .setup-skip { min-height: 44px; }
@@ -702,8 +708,8 @@
     </form>
     <form class="setup-step" id="setup-prov-form" hidden>
       <h2>Provider</h2>
-      <p id="setup-prov-intro">The model that reads your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. You can skip this: Documents are filed and wait to be read until you choose one in Settings.</p>
-      <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are read">
+      <p id="setup-prov-intro">The model that processes your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. You can skip this: Documents are filed and wait to be processed until you choose one in Settings.</p>
+      <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are processed">
         <label><input type="radio" name="setup-prov-kind" value="openrouter" checked> OpenRouter</label>
         <label><input type="radio" name="setup-prov-kind" value="custom"> Custom</label>
       </div>
@@ -713,7 +719,7 @@
       </div>
       <div class="prov-fields" id="setup-prov-openrouter">
         <label class="prov-check"><input type="checkbox" id="setup-prov-zero-retention" checked> Zero retention</label>
-        <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't read them while this is on.</p>
+        <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
       </div>
       <label for="setup-prov-key">Key</label>
       <input id="setup-prov-key" type="password" placeholder="Your OpenRouter key" autocomplete="off" spellcheck="false">
@@ -776,8 +782,8 @@
   </div>
   <div role="tabpanel" id="settings-provider" aria-labelledby="settings-tab-provider">
   <form id="settings-form">
-    <p>The model that reads your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. Changing it reads nothing again: Documents already read keep the reading they have.</p>
-    <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are read">
+    <p>The model that processes your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. Changing it processes nothing again: Documents already processed keep what they have.</p>
+    <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are processed">
       <label><input type="radio" name="prov-kind" value="openrouter" checked> OpenRouter</label>
       <label><input type="radio" name="prov-kind" value="custom"> Custom</label>
     </div>
@@ -787,7 +793,7 @@
     </div>
     <div class="prov-fields" id="prov-openrouter">
       <label class="prov-check"><input type="checkbox" id="prov-zero-retention" checked> Zero retention</label>
-      <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't read them while this is on.</p>
+      <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
     </div>
     <label for="prov-key">Key</label>
     <div class="prov-row">
@@ -810,7 +816,7 @@
   </div>
   <div role="tabpanel" id="settings-languages" aria-labelledby="settings-tab-languages" hidden>
   <form id="lang-form">
-    <p>Up to four, in order of preference. Each Document read from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them reads nothing again.</p>
+    <p>Up to four, in order of preference. Each Document processed from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them processes nothing again.</p>
     <label for="lang-1">First</label>
     <select id="lang-1" class="lang-pick" required></select>
     <label for="lang-2">Second</label>

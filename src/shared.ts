@@ -42,6 +42,11 @@ export type ApiDocument = {
   receiver: Party | null;
   deadlines: Deadline[];
   /**
+   * The model that made the Document's reading, or the backend an older
+   * Enrichment named instead; null when it has none, or none is recorded.
+   */
+  readBy: string | null;
+  /**
    * How many pages the Original has, each served by
    * `/api/documents/:hash/pages/:n`: one for an image, null when it isn't
    * known — a type with no pages, or a PDF poppler couldn't read.
