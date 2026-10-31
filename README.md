@@ -1,13 +1,15 @@
 # Zayla
 
-**An open-source document archive, organized by AI.**
+**A self-hosted, open-source document archive, organized by AI.**
 
-Drop in your letters, bills, legal documents, IDs and handwritten notes, and
-find any of them in seconds.
+Drop in your letters, bills, contracts, IDs and handwritten notes, and find any
+of them in seconds, whatever language they're in.
+
+[Install with Docker](#install-with-docker)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/hero-dark.webp">
-  <img src="docs/screenshots/hero-light.webp" alt="A Library of scanned letters and bills on a desktop, and the same Library on a phone">
+  <img src="docs/screenshots/hero-light.webp" alt="Scanned letters and bills in Zayla on a desktop and a phone">
 </picture>
 
 ## A look inside
