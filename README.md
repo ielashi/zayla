@@ -50,7 +50,7 @@ and Zayla knowing the address your browser opens:
 
 ```yaml
     environment:
-      ZAYLA_URL: https://docs.example.com
+      ZAYLA_URL: https://zayla.example.com
 ```
 
 `ZAYLA_URL` is an origin, with no path: Zayla is served at the root of its own
