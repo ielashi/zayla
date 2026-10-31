@@ -704,8 +704,8 @@
       </div>
     </form>
     <form class="setup-step" id="setup-lang-form" hidden>
-      <h2>Reading languages</h2>
-      <p>Up to four, in order of preference. Each Document gets its title and summary in each of them. You can change these later in Settings.</p>
+      <h2>Languages</h2>
+      <p>Up to four, in order of preference. Each document gets its title and summary in each of them. You can change these later in Settings.</p>
       <label for="setup-lang-1">First</label>
       <select id="setup-lang-1" required></select>
       <label for="setup-lang-2">Second</label>
@@ -721,8 +721,8 @@
     </form>
     <form class="setup-step" id="setup-prov-form" hidden>
       <h2>Provider</h2>
-      <p id="setup-prov-intro">The model that processes your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. You can skip this: Documents are filed and wait to be processed until you choose one in Settings.</p>
-      <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are processed">
+      <p id="setup-prov-intro">The model that processes your documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. You can skip this: documents are added and wait to be processed until you choose one in Settings.</p>
+      <div class="prov-kind" role="radiogroup" aria-label="Where your documents are processed">
         <label><input type="radio" name="setup-prov-kind" value="openrouter" checked> OpenRouter</label>
         <label><input type="radio" name="setup-prov-kind" value="custom"> Custom</label>
       </div>
@@ -732,7 +732,7 @@
       </div>
       <div class="prov-fields" id="setup-prov-openrouter">
         <label class="prov-check"><input type="checkbox" id="setup-prov-zero-retention" checked> Zero retention</label>
-        <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
+        <p class="prov-note">Your documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
       </div>
       <label for="setup-prov-key">Key</label>
       <input id="setup-prov-key" type="password" placeholder="Your OpenRouter key" autocomplete="off" spellcheck="false">
@@ -775,7 +775,7 @@
     <div class="same-as-status" id="same-as-status" role="status"></div>
     <div class="same-as-row">
       <button type="button" id="same-as-cancel">Cancel</button>
-      <button type="submit" id="same-as-submit">Merge</button>
+      <button type="submit" id="same-as-submit">Save</button>
     </div>
   </form>
 </dialog>
@@ -790,13 +790,13 @@
   </div>
   <div class="settings-tabs" id="settings-tabs" role="tablist" aria-labelledby="settings-title">
     <button type="button" role="tab" id="settings-tab-provider" aria-controls="settings-provider" aria-selected="true">Provider</button>
-    <button type="button" role="tab" id="settings-tab-languages" aria-controls="settings-languages" aria-selected="false" tabindex="-1">Reading languages</button>
+    <button type="button" role="tab" id="settings-tab-languages" aria-controls="settings-languages" aria-selected="false" tabindex="-1">Languages</button>
     <button type="button" role="tab" id="settings-tab-signin" aria-controls="settings-signin" aria-selected="false" tabindex="-1">Sign-in</button>
   </div>
   <div role="tabpanel" id="settings-provider" aria-labelledby="settings-tab-provider">
   <form id="settings-form">
-    <p>The model that processes your Documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. Changing it processes nothing again: Documents already processed keep what they have.</p>
-    <div class="prov-kind" role="radiogroup" aria-label="Where your Documents are processed">
+    <p>The model that processes your documents: on OpenRouter, or at any other server speaking the OpenAI-compatible API. Changing it processes nothing again: documents already processed keep what they have.</p>
+    <div class="prov-kind" role="radiogroup" aria-label="Where your documents are processed">
       <label><input type="radio" name="prov-kind" value="openrouter" checked> OpenRouter</label>
       <label><input type="radio" name="prov-kind" value="custom"> Custom</label>
     </div>
@@ -806,7 +806,7 @@
     </div>
     <div class="prov-fields" id="prov-openrouter">
       <label class="prov-check"><input type="checkbox" id="prov-zero-retention" checked> Zero retention</label>
-      <p class="prov-note">Your Documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
+      <p class="prov-note">Your documents go only to hosts that keep nothing of them once they have answered. A model no such host offers can't process them while this is on.</p>
     </div>
     <label for="prov-key">Key</label>
     <div class="prov-row">
@@ -822,14 +822,14 @@
     <div class="same-as-status" id="prov-status" role="status"></div>
     <div class="prov-waiting" id="prov-waiting" hidden></div>
     <div class="same-as-row">
-      <button type="button" id="prov-clear" hidden>Clear Provider</button>
+      <button type="button" id="prov-clear" hidden>Clear provider</button>
       <button type="submit" id="prov-save">Save</button>
     </div>
   </form>
   </div>
   <div role="tabpanel" id="settings-languages" aria-labelledby="settings-tab-languages" hidden>
   <form id="lang-form">
-    <p>Up to four, in order of preference. Each Document processed from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them processes nothing again.</p>
+    <p>Up to four, in order of preference. Each document processed from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them processes nothing again.</p>
     <label for="lang-1">First</label>
     <select id="lang-1" class="lang-pick" required></select>
     <label for="lang-2">Second</label>

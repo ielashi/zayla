@@ -640,7 +640,7 @@ function documentCard(d: ApiDocument): HTMLButtonElement {
       : queued
         ? html`<div class="working wait">Queued to be processed</div>`
         : waiting &&
-          html`<div class="working wait"><span>Waiting to be processed${!state.provider && html`<br><span class="retry-hint">no Provider chosen</span>`}</span></div>`;
+          html`<div class="working wait"><span>Waiting to be processed${!state.provider && html`<br><span class="retry-hint">no provider chosen</span>`}</span></div>`;
   // Found only through its Transcription: nothing else on the card says why it
   // is here, so the passage that matched takes the summary's place.
   const snippet = hitFor(d.hash)?.snippet;
@@ -679,8 +679,8 @@ function renderDocuments(list: ApiDocument[]) {
     setHtml(
       view,
       state.provider
-        ? html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are imported and processed automatically.</p></div>`
-        : html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are filed straight away, and processed once you <button type="button" class="settings-link">choose a Provider in Settings</button>.</p></div>`,
+        ? html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">PDFs and images are added and processed automatically.</p></div>`
+        : html`<div class="state state-empty"><h2>No documents yet</h2><p>Drag files anywhere, or click here to browse.</p><p class="hint">Documents are added straight away, and processed once you <button type="button" class="settings-link">choose a provider in Settings</button>.</p></div>`,
     );
     return;
   }
@@ -711,7 +711,7 @@ function waitingNotice(): HTMLElement[] {
     notice,
     state.provider
       ? html`<span>${n} ${documentWord(n)} waiting to be processed by ${state.provider.model}.</span><button type="button" class="read-waiting">Process them now</button>`
-      : html`<span>${n} ${documentWord(n)} waiting to be processed. No Provider has been chosen to process them.</span><button type="button" class="settings-link">Choose a Provider</button>`,
+      : html`<span>${n} ${documentWord(n)} waiting to be processed. No provider has been chosen to process them.</span><button type="button" class="settings-link">Choose a provider</button>`,
   );
   return [notice];
 }
@@ -743,7 +743,7 @@ function suspectedBlock(page: ApiEntityPage): HTMLElement[] {
     block,
     html`
     <h3>Possibly the same</h3>
-    <p class="ep-note">Nothing has been merged: these are questions, not changes.</p>
+    <p class="ep-note">Nothing has changed: these are only questions.</p>
     <ul>${page.suspected.map(
       (e) => html`<li>
           <a href="${entityPath(page.kind, e.id)}">${e.displayName}</a>
@@ -772,7 +772,7 @@ function renderEntity(id: number) {
   if (held.gone)
     return renderNothing(
       "Nothing is listed at this address",
-      "Either it never named anyone, or that name's last document has since been deleted — a name's spellings are remembered, so re-importing brings it back as it was.",
+      "Either it never named anyone, or that name's last document has since been deleted — a name's spellings are remembered, so adding that document again brings it back as it was.",
     );
   const page = held.page;
   if (!page) return view.replaceChildren();
@@ -799,10 +799,10 @@ function renderEntity(id: number) {
   // its own — which is what the button beside it does.
   if (page.mergedNames.length)
     facts.push([
-      "Merged in",
+      "Also listed as",
       page.mergedNames.map(
         (m) =>
-          html`<span class="ep-merged">${m.displayName}<button type="button" class="ep-undo" data-unmerge="${m.id}">Unmerge</button></span>`,
+          html`<span class="ep-merged">${m.displayName}<button type="button" class="ep-undo" data-unmerge="${m.id}">Separate</button></span>`,
       ),
     ]);
 
@@ -980,7 +980,7 @@ function openSameAs(
 ) {
   if (!candidates.length) return;
   sameAsState = { page, candidates };
-  sameAsIntro.textContent = `Merging says that “${page.displayName}” and another name are one ${page.kind}. Nothing is discarded, and you can take it back.`;
+  sameAsIntro.textContent = `This says that “${page.displayName}” and another name are one ${page.kind}. Nothing is discarded, and you can take it back.`;
   sameAsWho.replaceChildren(
     ...candidates.map((e) => {
       const option = document.createElement("option");
@@ -1011,12 +1011,12 @@ async function confirmSameAs() {
   const other = Number(sameAsWho.value);
   const displayName = chosenName();
   if (sameAsName.value === "spelling" && !displayName) {
-    sameAsRefused("Type the spelling to show, or let the Library choose.");
+    sameAsRefused("Type the spelling to show, or let Zayla choose.");
     return;
   }
   sameAsSubmit.disabled = true;
   sameAsStatus.classList.remove("err");
-  sameAsStatus.textContent = "Merging…";
+  sameAsStatus.textContent = "Saving…";
   let res: Response;
   try {
     res = await fetch("/api/merges", {
@@ -1039,7 +1039,7 @@ async function confirmSameAs() {
   };
   if (!res.ok || body.error) {
     sameAsSubmit.disabled = false;
-    sameAsRefused(body.error || `Couldn't merge (HTTP ${res.status}).`);
+    sameAsRefused(body.error || `Couldn't save (HTTP ${res.status}).`);
     return;
   }
   sameAs.close();
@@ -1071,7 +1071,7 @@ async function takeMergeBack(absorbed: number) {
     error?: string;
   };
   if (!res.ok || body.error) {
-    toast(body.error || `Couldn't unmerge (HTTP ${res.status}).`, true);
+    toast(body.error || `Couldn't separate (HTTP ${res.status}).`, true);
     return;
   }
   toast(
@@ -1272,7 +1272,7 @@ function renderActions(d: ApiDocument) {
   setHtml(
     bar,
     html`
-    ${!busy && !state.provider && html`<p class="proc-note">No Provider chosen. <button type="button" class="settings-link">Choose a Provider</button></p>`}
+    ${!busy && !state.provider && html`<p class="proc-note">No provider chosen. <button type="button" class="settings-link">Choose a provider</button></p>`}
     <div class="p-actions">
       <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
         Open original
@@ -1701,7 +1701,7 @@ async function uploadFiles(fileList: FileList | null) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     imported = (await res.json()) as ImportItem[];
   } catch (err) {
-    toast(`Upload failed: ${(err as Error).message}`, true);
+    toast(`Couldn't add: ${(err as Error).message}`, true);
     return;
   }
 
@@ -2109,7 +2109,7 @@ provClear.addEventListener("click", async () => {
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     state.provider = null;
     fillSettings();
-    setProvStatus("Cleared. New Documents will wait to be processed.");
+    setProvStatus("Cleared. New documents will wait to be processed.");
     render();
   } catch (err) {
     setProvStatus((err as Error).message, true);

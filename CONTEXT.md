@@ -6,6 +6,12 @@ find it again later.
 
 ## Language
 
+These are the words of the code, its docs and its issues. The interface speaks
+to people instead: a term appears there only if someone who has never read this
+file would follow it, lowercase within a sentence, and an entry below says so
+where the interface has a word of its own. A named setting, such as Zero
+retention, keeps its capital.
+
 ### The archive
 
 **Library**:
@@ -75,6 +81,7 @@ anything, and removing one discards nothing already written in it — until the
 Document is next read, when its titles and summaries are replaced by those in
 the reading languages of the user who asked. Keywords and the Transcription
 stay in the Document's own language regardless.
+The interface calls them "languages".
 _Avoid_: Locale, display language, UI language, target language
 
 **Transcription**:
@@ -135,6 +142,7 @@ Documents behind it unless the owner says otherwise. Zayla never Merges on
 its own, and the owner can take any Merge back, which leaves both names exactly
 as they stood. A Merge outlives the Documents it was made over, so untangling a
 name is work done once.
+The interface says two names are "the same", and taking a Merge back "separate".
 _Avoid_: Dedupe, link, alias, combine
 
 **Me**:
@@ -153,6 +161,7 @@ _Avoid_: Self, account, profile, user
 **Import**:
 Adding a Document to the Library. Importing content the Library already holds
 changes nothing, because identity is the content.
+The interface says "add".
 _Avoid_: Upload, ingest, add
 
 **Re-Enrich**:

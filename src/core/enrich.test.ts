@@ -401,7 +401,7 @@ test("enrichDocument: a re-reading with no transcription fails and leaves the Do
 
     await expect(
       enrichDocument(lib, doc, providerReading(null)),
-    ).rejects.toThrow("no Transcription");
+    ).rejects.toThrow("no text");
 
     expect(await readTranscription(TMP, doc.hash)).toBe("Rechnung Nr. 4711");
     expect(getDocument(lib, doc.hash)?.enrichModel).toBe("first");

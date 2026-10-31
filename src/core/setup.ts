@@ -52,7 +52,7 @@ export function isSetupCode(typed: unknown, expected: string): boolean {
 /** Thrown when Setup is finished a second time: a user already exists. */
 export class SetupClosed extends Error {
   constructor() {
-    super("this Library already has an owner");
+    super("this library already has an owner");
   }
 }
 
