@@ -23,18 +23,18 @@ docker compose logs zayla
 ```
 
 Open `http://<your-server>:3000`. The first visit asks for the **Setup code**
-printed in the logs; it makes you the Library's owner, so whoever reaches the
-port before you can't. Without Compose:
+printed in the logs; it makes you the owner, so nobody else who reaches the port
+can claim Zayla first. Without Compose:
 
 ```sh
 docker run -d --name zayla -p 3000:3000 -v "$PWD/library:/data" ghcr.io/ielashi/zayla:latest
 ```
 
-### The Library folder
+### The library folder
 
 Everything Zayla keeps is plain files in the folder mounted at `/data`: your
-Originals, what Zayla read out of them, and the people and organizations they
-involve. You can browse it, grep it and back it up without Zayla.
+original files, what Zayla read out of them, and the people and organizations
+they involve. You can browse it, grep it and back it up without Zayla.
 
 The image runs as uid 1000. Create the folder yourself before the first start
 (Docker would otherwise create it owned by root, and Zayla couldn't write to
