@@ -12,40 +12,6 @@ of them in seconds, whatever language they're in.
   <img src="docs/screenshots/hero-light.webp" alt="Scanned letters and bills in Zayla on a desktop and a phone">
 </picture>
 
-## A look inside
-
-**Search across languages.** Zayla writes every Document's title and summary in
-your reading languages, so searching for "contract" also finds an Arabic lease
-and a German daycare offer.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/search-desktop-dark.webp">
-  <img src="docs/screenshots/search-desktop-light.webp" alt="Results for “contract”: English, Arabic and German Documents side by side">
-</picture>
-
-**Read a Document at a glance.** The Original sits beside what Zayla read out of
-it: a summary, who it involves and any deadlines.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/document-desktop-dark.webp">
-  <img src="docs/screenshots/document-desktop-light.webp" alt="A German letter beside its English summary, people and deadlines">
-</picture>
-
-It works just as well on your phone.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/document-phone-dark.webp">
-  <img src="docs/screenshots/document-phone-light.webp" width="280" alt="The same letter on a phone">
-</picture>
-
-**Browse by Person or Organization.** Tell Zayla that two spellings are one name
-and their Documents come together, and you can always take it back.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/person-desktop-dark.webp">
-  <img src="docs/screenshots/person-desktop-light.webp" alt="A Person's page listing the spellings merged into it and their Documents">
-</picture>
-
 ## Install with Docker
 
 Zayla is published as `ghcr.io/ielashi/zayla` for amd64 and arm64.
