@@ -5,11 +5,8 @@ import {
 import { listedEntities } from "./src/browse.ts";
 import { tabFor, wrapFocus } from "./src/focus.ts";
 import { type Html, type HtmlValue, html, join, setHtml } from "./src/html.ts";
-import {
-  languageName,
-  OFFERED_LANGUAGES,
-  TESTED_LANGUAGES,
-} from "./src/languages.ts";
+import { languageList } from "./src/language-list.ts";
+import { languageName, TESTED_LANGUAGES } from "./src/languages.ts";
 import { modelField } from "./src/model-field.ts";
 import {
   DESTINATIONS,
@@ -2113,11 +2110,9 @@ provWaiting.addEventListener("click", (e) => {
 });
 
 // ---- Settings: Reading languages -------------------------------------------
-// The offered languages, by name: the tested ones first, the rest offered
-// without that promise. Saving reads nothing again, but which of each
-// Document's titles is shown may change, so the Library is fetched anew.
+// Saving reads nothing again, but which of each Document's titles is shown may
+// change, so the Library is fetched anew.
 
-const langPicks = [1, 2, 3, 4].map((n) => el<HTMLSelectElement>(`lang-${n}`));
 const langStatus = el("lang-status");
 const langSave = el<HTMLButtonElement>("lang-save");
 
@@ -2126,52 +2121,17 @@ function setLangStatus(msg: string, isErr = false) {
   langStatus.classList.toggle("err", isErr);
 }
 
-/** The options every picker offers: the tested ones first, in their own order, then the rest by name. */
-function languageOptions(): Html {
-  const option = (code: string) =>
-    html`<option value="${code}">${languageName(code)}</option>`;
-  const byName = (a: string, b: string) =>
-    languageName(a).localeCompare(languageName(b));
-  const untested = OFFERED_LANGUAGES.filter(
-    (c) => !TESTED_LANGUAGES.includes(c),
-  ).sort(byName);
-  return html`<optgroup label="Tested">${TESTED_LANGUAGES.map(option)}</optgroup><optgroup label="Untested">${untested.map(option)}</optgroup>`;
-}
+// What an earlier save said stops being true at the first edit.
+const langList = languageList(document, "lang", () => setLangStatus(""));
 
-/** Offer every language in these pickers, the first one required. */
-function fillLanguagePickers(picks: HTMLSelectElement[]) {
-  const options = languageOptions();
-  picks.forEach((pick, i) => {
-    setHtml(
-      pick,
-      html`${i > 0 && html`<option value="">None</option>`}${options}`,
-    );
-  });
-}
-
-fillLanguagePickers(langPicks);
-
-/**
- * Set the pickers to these languages. One the pickers don't offer (chosen
- * through the API) is added where it is held, so saving never drops it.
- */
-function showLanguages(languages: string[]) {
-  langPicks.forEach((pick, i) => {
-    const code = languages[i] ?? "";
-    if (code && ![...pick.options].some((o) => o.value === code))
-      pick.add(new Option(languageName(code), code));
-    pick.value = code;
-  });
-}
-
-/** Draw the pickers from the user's Reading languages, as the server holds them. */
+/** Draw the list from the user's Reading languages, as the server holds them. */
 async function fillLanguages() {
   setLangStatus("");
   try {
     const res = await fetch("/api/reading-languages");
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const { languages } = (await res.json()) as { languages: string[] };
-    showLanguages(languages);
+    langList.show(languages);
   } catch (err) {
     setLangStatus(
       `Couldn't read your languages: ${(err as Error).message}`,
@@ -2182,7 +2142,7 @@ async function fillLanguages() {
 
 el("lang-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const languages = langPicks.map((pick) => pick.value).filter(Boolean);
+  const languages = langList.languages();
   langSave.disabled = true;
   setLangStatus("Saving…");
   try {
@@ -2193,7 +2153,7 @@ el("lang-form").addEventListener("submit", async (e) => {
     });
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const saved = (await res.json()) as { languages: string[] };
-    showLanguages(saved.languages);
+    langList.show(saved.languages);
     setLangStatus(
       `Saved. Documents processed from now on are written in ${saved.languages.map(languageName).join(", ")}.`,
     );
@@ -2476,9 +2436,7 @@ const setupSteps = [
 const setupCode = el<HTMLInputElement>("setup-code");
 const setupPw = el<HTMLInputElement>("setup-pw");
 const setupPwAgain = el<HTMLInputElement>("setup-pw-again");
-const setupLangPicks = [1, 2, 3, 4].map((n) =>
-  el<HTMLSelectElement>(`setup-lang-${n}`),
-);
+const setupLangList = languageList(document, "setup-lang");
 const setupProvKey = el<HTMLInputElement>("setup-prov-key");
 const setupProvModel = el<HTMLInputElement>("setup-prov-model");
 const setupProvField = modelField(document, "setup-prov");
@@ -2497,7 +2455,9 @@ function showStep(n: number) {
     form.hidden = i !== n;
   });
   setSetupStatus("");
-  setupSteps[n]?.querySelector<HTMLElement>("input, select")?.focus();
+  setupSteps[n]
+    ?.querySelector<HTMLElement>("input, select:not([hidden]), .lang-btn")
+    ?.focus();
 }
 
 /** The browser's language when it is a tested one, else English. */
@@ -2506,13 +2466,9 @@ function browserReadingLanguage(): string {
   return TESTED_LANGUAGES.includes(code) ? code : "EN";
 }
 
-fillLanguagePickers(setupLangPicks);
-
 function showSetup() {
   acceptedCode = "";
-  setupLangPicks.forEach((pick, i) => {
-    pick.value = i === 0 ? browserReadingLanguage() : "";
-  });
+  setupLangList.show([browserReadingLanguage()]);
   setup.classList.add("on");
   showStep(0);
 }
@@ -2635,7 +2591,7 @@ async function finishSetup(
       body: JSON.stringify({
         code: acceptedCode,
         password: setupPw.value,
-        languages: setupLangPicks.map((pick) => pick.value).filter(Boolean),
+        languages: setupLangList.languages(),
         provider,
       }),
     });

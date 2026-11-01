@@ -90,7 +90,7 @@ anything, and removing one discards nothing already written in it — until the
 Document is next read, when its titles and summaries are replaced by those in
 the reading languages of the user who asked. Keywords and the Transcription
 stay in the Document's own language regardless.
-The interface calls them "languages".
+The interface calls them "languages", and the first one "main".
 _Avoid_: Locale, display language, UI language, target language
 
 **Transcription**:

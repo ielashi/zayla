@@ -156,15 +156,9 @@
     </form>
     <form class="setup-step" id="setup-lang-form" hidden>
       <h2>Languages</h2>
-      <p>Up to four, in order of preference. Each document gets its title and summary in each of them. You can change these later in Settings.</p>
-      <label for="setup-lang-1">First</label>
-      <select id="setup-lang-1" required></select>
-      <label for="setup-lang-2">Second</label>
-      <select id="setup-lang-2"></select>
-      <label for="setup-lang-3">Third</label>
-      <select id="setup-lang-3"></select>
-      <label for="setup-lang-4">Fourth</label>
-      <select id="setup-lang-4"></select>
+      <p>Up to four. Documents get a title and summary in each. You can change these later.</p>
+      <ul class="lang-list" id="setup-lang-list" aria-label="Your languages"></ul>
+      <select id="setup-lang-add" class="lang-add" aria-label="Add a language"></select>
       <div class="setup-row">
         <button type="button" class="setup-back">Back</button>
         <button type="submit" class="gate-btn">Continue</button>
@@ -282,15 +276,9 @@
   </div>
   <div role="tabpanel" id="settings-languages" aria-labelledby="settings-tab-languages" hidden>
   <form id="lang-form">
-    <p>Up to four, in order of preference. Each document processed from now on gets its title and summary in each of them, and is shown in its own language when that is one of them, else in the first. Changing them processes nothing again.</p>
-    <label for="lang-1">First</label>
-    <select id="lang-1" class="lang-pick" required></select>
-    <label for="lang-2">Second</label>
-    <select id="lang-2" class="lang-pick"></select>
-    <label for="lang-3">Third</label>
-    <select id="lang-3" class="lang-pick"></select>
-    <label for="lang-4">Fourth</label>
-    <select id="lang-4" class="lang-pick"></select>
+    <p>Up to four. Documents processed from now on get a title and summary in each.</p>
+    <ul class="lang-list" id="lang-list" aria-label="Your languages"></ul>
+    <select id="lang-add" class="lang-add" aria-label="Add a language"></select>
     <div class="same-as-status" id="lang-status" role="status"></div>
     <div class="same-as-row">
       <button type="submit" id="lang-save">Save languages</button>

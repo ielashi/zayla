@@ -48,7 +48,8 @@
   }
   .icon-btn,
   .p-close,
-  .settings-close {
+  .settings-close,
+  .lang-btn {
     min-width: 44px;
     min-height: 44px;
     justify-content: center;
