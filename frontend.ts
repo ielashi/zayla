@@ -10,6 +10,7 @@ import {
   OFFERED_LANGUAGES,
   TESTED_LANGUAGES,
 } from "./src/languages.ts";
+import { modelField } from "./src/model-field.ts";
 import {
   DESTINATIONS,
   type Destination,
@@ -1880,7 +1881,7 @@ const provZeroRetention = el<HTMLInputElement>("prov-zero-retention");
 const provKey = el<HTMLInputElement>("prov-key");
 const provKeyRemove = el<HTMLButtonElement>("prov-key-remove");
 const provModel = el<HTMLInputElement>("prov-model");
-const provModels = el<HTMLDataListElement>("prov-models");
+const provField = modelField(document, "prov");
 const provFind = el<HTMLButtonElement>("prov-find");
 const provStatus = el("prov-status");
 const provWaiting = el("prov-waiting");
@@ -1902,12 +1903,11 @@ function fillSettings() {
   showKind("prov", p?.kind ?? "openrouter");
   provUrl.value = p?.kind === "custom" ? p.baseUrl : "";
   provZeroRetention.checked = p?.kind === "openrouter" ? p.zeroRetention : true;
-  provModel.value = p?.model ?? "";
+  provField.fill(p?.kind ?? "openrouter", p?.model ?? "");
   provKey.value = "";
   removeKey = false;
   showKeyHint();
   provClear.hidden = !p;
-  provModels.replaceChildren();
   setProvStatus("");
   fillWaiting();
 }
@@ -1980,9 +1980,11 @@ provKeyRemove.addEventListener("click", () => {
   provKey.value = "";
   provKey.placeholder = "The key will be removed when you save";
   provKeyRemove.hidden = true;
+  showKeyHint();
 });
 provKey.addEventListener("input", () => {
   if (provKey.value) removeKey = false;
+  showKeyHint();
 });
 
 /** Whether the key held is for where the form now sends Documents. */
@@ -1997,9 +1999,11 @@ function heldKeyApplies(): boolean {
 // The held key belongs to the address it was given for, and the server will
 // not carry it to another one — so say so as soon as the destination changes.
 function showKeyHint() {
-  if (removeKey) return;
   const kind = chosenKind("prov");
   const applies = heldKeyApplies();
+  // OpenRouter reads nothing without a key, and the model is already filled in.
+  provKey.required = kind === "openrouter" && (removeKey || !applies);
+  if (removeKey) return;
   provKey.placeholder = applies
     ? "A key is set — type to replace it"
     : !state.provider?.hasKey
@@ -2018,28 +2022,14 @@ el("settings-form")
   .querySelector(".prov-kind")
   ?.addEventListener("change", () => {
     showKind("prov", chosenKind("prov"));
-    provModels.replaceChildren();
+    provField.switchKind(chosenKind("prov"));
     setProvStatus("");
     showKeyHint();
   });
 provZeroRetention.addEventListener("change", () => {
-  provModels.replaceChildren();
+  provField.forgetOffers();
   setProvStatus("");
 });
-
-/** Offer these models as a model field's suggestions; returns what to say about them. */
-function offerModels(list: HTMLDataListElement, models: string[]): string {
-  list.replaceChildren(
-    ...models.map((id) => {
-      const o = document.createElement("option");
-      o.value = id;
-      return o;
-    }),
-  );
-  return models.length
-    ? `${models.length} model${models.length === 1 ? "" : "s"} offered — pick one, or type an id.`
-    : "That address offers no models; type the id instead.";
-}
 
 // Ask the address which models it offers. A typed key is used; without one,
 // the server uses the key it holds for that same address, if any.
@@ -2062,7 +2052,7 @@ provFind.addEventListener("click", async () => {
     });
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const { models } = (await res.json()) as { models: string[] };
-    setProvStatus(offerModels(provModels, models));
+    setProvStatus(provField.offer(models));
     if (models.length) provModel.focus();
   } catch (err) {
     setProvStatus(
@@ -2491,7 +2481,7 @@ const setupLangPicks = [1, 2, 3, 4].map((n) =>
 );
 const setupProvKey = el<HTMLInputElement>("setup-prov-key");
 const setupProvModel = el<HTMLInputElement>("setup-prov-model");
-const setupProvModels = el<HTMLDataListElement>("setup-prov-models");
+const setupProvField = modelField(document, "setup-prov");
 const setupProvFind = el<HTMLButtonElement>("setup-prov-find");
 
 /** The code as accepted by the server, carried by every later step. */
@@ -2582,15 +2572,18 @@ setupSteps[2]?.addEventListener("submit", (e) => {
 });
 
 showKind("setup-prov", "openrouter");
+setupProvField.fill("openrouter", "");
+setupProvKey.required = true;
 setupSteps[3]?.querySelector(".prov-kind")?.addEventListener("change", () => {
   const kind = chosenKind("setup-prov");
   showKind("setup-prov", kind);
   setupProvKey.placeholder = noKeyHint(kind);
-  setupProvModels.replaceChildren();
+  setupProvKey.required = kind === "openrouter";
+  setupProvField.switchKind(kind);
   setSetupStatus("");
 });
 el("setup-prov-zero-retention").addEventListener("change", () => {
-  setupProvModels.replaceChildren();
+  setupProvField.forgetOffers();
   setSetupStatus("");
 });
 
@@ -2614,7 +2607,7 @@ setupProvFind.addEventListener("click", async () => {
     });
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const { models } = (await res.json()) as { models: string[] };
-    setSetupStatus(offerModels(setupProvModels, models));
+    setSetupStatus(setupProvField.offer(models));
     if (models.length) setupProvModel.focus();
   } catch (err) {
     setSetupStatus(

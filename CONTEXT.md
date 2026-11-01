@@ -61,6 +61,15 @@ Custom, at any other address the user gives; OpenRouter is reached only by
 choosing it, never by typing its address as a Custom one.
 _Avoid_: Reader, backend, engine, LLM, settings
 
+**Recommended model**:
+The model Zayla suggests for an OpenRouter Provider, offered ready to accept to
+anyone who has not chosen a Provider. It is a suggestion, never a choice: until
+a user saves it, their Documents go nowhere and wait as they otherwise would.
+Once saved it is that user's model like any other, so recommending a different
+model later changes no one's Provider. A Custom Provider has none, because a
+model means something only at its own address.
+_Avoid_: Default model, preferred model
+
 **Zero retention**:
 An OpenRouter Provider's promise that a Document is sent only to hosts that
 keep nothing of it once they have answered — no logs, no copy held for abuse
