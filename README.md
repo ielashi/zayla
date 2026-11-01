@@ -10,6 +10,35 @@ of them in seconds, whatever language they're in.
   <img src="docs/screenshots/hero-light.webp" alt="Scanned letters and bills in Zayla on a desktop and a phone">
 </picture>
 
+## How it works
+
+1. **Drop in anything.** Letters, bills, contracts, IDs and handwritten notes,
+   as PDFs or photos.
+2. **Zayla reads it for you.** AI extracts a transcription, metadata, and
+   generates a summary in all the languages you speak. You choose the model,
+   hosted or on your own hardware.
+3. **Find it by what you remember.** A name, a phrase, an amount. Search looks
+   inside every document, even a photo of a handwritten note.
+4. **See everything by who it's about.** Open a person or organization to find
+   every document involving them.
+
+**Your library stays yours.** It's plain files you can browse, grep and back up
+without Zayla.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/search-dark.webp">
+  <img src="docs/screenshots/search-light.webp" alt="Searching for contract in Zayla finds documents in English, Arabic and German">
+</picture>
+
+<p align="center"><em>Search for "contract" and find documents in English, Arabic and German.</em></p>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/person-dark.webp">
+  <img src="docs/screenshots/person-light.webp" alt="A person's page in Zayla, with the documents they received">
+</picture>
+
+<p align="center"><em>Everything involving one person, in one place.</em></p>
+
 ## Install with Docker
 
 Zayla is published as `ghcr.io/ielashi/zayla` for amd64 and arm64.
