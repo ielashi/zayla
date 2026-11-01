@@ -30,10 +30,14 @@ without Zayla.
   <img src="docs/screenshots/search-light.webp" alt="Searching for contract in Zayla finds documents in English, Arabic and German">
 </picture>
 
+<p align="center"><sub><em>Search for "contract" and find documents in English, Arabic and German.</em></sub></p>
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/person-dark.webp">
   <img src="docs/screenshots/person-light.webp" alt="A person's page in Zayla, with the documents they received">
 </picture>
+
+<p align="center"><sub><em>Everything involving one person, in one place.</em></sub></p>
 
 ## Install with Docker
 
