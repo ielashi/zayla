@@ -315,7 +315,7 @@ test("the session cookie is Secure only when the browser came over HTTPS", async
     expect(plain).not.toContain("Secure");
 
     // Behind a TLS-terminating proxy, the browser's own scheme is what counts.
-    expect(await setCookie({ origin: "https://docs.example.com" })).toContain(
+    expect(await setCookie({ origin: "https://zayla.example.com" })).toContain(
       "Secure",
     );
     expect(await setCookie({ "x-forwarded-proto": "https" })).toContain(

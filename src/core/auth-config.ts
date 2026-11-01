@@ -10,9 +10,9 @@
  * passwords are the way in. See README.
  */
 export type AuthConfig = {
-  /** Relying Party ID — the bare domain (no scheme, no port), e.g. "docs.example.com". */
+  /** Relying Party ID — the bare domain (no scheme, no port), e.g. "zayla.example.com". */
   rpID: string;
-  /** Exact origin the browser sees, e.g. "https://docs.example.com". */
+  /** Exact origin the browser sees, e.g. "https://zayla.example.com". */
   rpOrigin: string;
   /** Human-facing name shown in the passkey prompt. */
   rpName: string;
@@ -30,7 +30,7 @@ export function authConfig(env: Env = process.env): AuthConfig | null {
   if (!raw) return null;
   const refuse = (why: string) =>
     new Error(
-      `ZAYLA_URL=${raw} ${why}; give an origin like https://docs.example.com`,
+      `ZAYLA_URL=${raw} ${why}; give an origin like https://zayla.example.com`,
     );
   let url: URL;
   try {

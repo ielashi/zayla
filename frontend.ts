@@ -2249,7 +2249,7 @@ function fillPasskey() {
   passkeyRow.hidden = !works;
   passkeyIntro.textContent = passkeysOffered
     ? "Sign in with this device's passkey instead of typing your password."
-    : "Passkeys need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://docs.example.com) and restart it.";
+    : "Passkeys need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://zayla.example.com) and restart it.";
   setPasskeyStatus("");
 }
 
