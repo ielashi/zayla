@@ -282,7 +282,8 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.prov-tag {
+.prov-tag,
+.lang-tag {
   flex: none;
   padding: 2px 8px;
   font-size: 11px;
@@ -290,6 +291,56 @@
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: 999px;
+}
+/* The languages chosen, one row each, and the picker that adds another. */
+.lang-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lang-list:empty {
+  display: none;
+}
+.lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 3px 3px 3px 12px;
+  font-size: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.lang-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lang-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.lang-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.lang-btn:hover {
+  color: var(--ink);
+  background: var(--line-soft);
+}
+.lang-add[hidden] {
+  display: none;
 }
 .prov-row {
   display: flex;
@@ -539,6 +590,13 @@
   background: var(--paper);
   color: var(--ink);
 }
+.setup-step select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--paper) var(--select-arrow) no-repeat right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
 .setup-step input:focus,
 .setup-step select:focus {
   outline: none;
@@ -605,7 +663,8 @@
   .waiting-notice button,
   .prov-waiting button,
   .settings-link,
-  .settings-close
+  .settings-close,
+  .lang-btn
 ):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
