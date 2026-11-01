@@ -15,9 +15,9 @@ test("ZAYLA_URL gives the Relying Party its domain and origin", () => {
 });
 
 test("a trailing slash is the same address", () => {
-  expect(authConfig({ ZAYLA_URL: "https://zayla.example.com/" })?.rpOrigin).toBe(
-    "https://zayla.example.com",
-  );
+  expect(
+    authConfig({ ZAYLA_URL: "https://zayla.example.com/" })?.rpOrigin,
+  ).toBe("https://zayla.example.com");
 });
 
 test("a port stays in the origin but not in the Relying Party ID", () => {
