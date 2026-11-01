@@ -346,7 +346,7 @@ function renderNav() {
       a.href = d.path;
       setHtml(
         a,
-        html`${icons && html`<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${TAB_ICONS[d.name]}</svg>`}${d.label}`,
+        html`${icons && html`<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">${TAB_ICONS[d.name]}</svg>`}${d.label}`,
       );
       // "page" for the destination itself; "true" for the one an entity's page
       // is below, which is where the reader is without being what they are on.
@@ -636,7 +636,7 @@ function documentCard(d: ApiDocument): HTMLButtonElement {
   const overlay = enriching
     ? html`<div class="working"><div class="spinner"></div>Processing…</div>`
     : errored
-      ? html`<div class="working err"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Processing failed<br><span class="retry-hint">click to retry</span></span></div>`
+      ? html`<div class="working err"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>Processing failed<br><span class="retry-hint">click to retry</span></span></div>`
       : queued
         ? html`<div class="working wait">Queued to be processed</div>`
         : waiting &&
@@ -1175,7 +1175,7 @@ function drawPanel(d: ApiDocument) {
     panel,
     html`
     <div class="p-head">
-      <button class="p-close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="p-close" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       ${!hasPreview && html`<div class="p-thumb"><img src="/api/documents/${d.hash}/thumb" alt="" data-hide-on-error=".p-thumb"></div>`}
       <div class="p-head-text">
         <h2 id="p-title">${titleOf(d)}</h2>
@@ -1258,7 +1258,7 @@ function redrawPanel(hash: string) {
 }
 
 /** The Process action's icon, turning while its Document is read. */
-const PROCESS_ICON = html`<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>`;
+const PROCESS_ICON = html`<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg>`;
 
 // What can be done with the open Document, along the foot of the panel. What
 // can't be undone asks first, in the same place. A Document waiting to be read
@@ -1276,11 +1276,11 @@ function renderActions(d: ApiDocument) {
     <div class="p-actions">
       <a class="open" href="/api/documents/${d.hash}/original" target="_blank" rel="noopener">
         Open original
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M7 17L17 7M9 7h8v8"/></svg>
       </a>
       <button class="proc-btn${busy ? " busy" : ""}" type="button">${PROCESS_ICON}${busy ? "Processing…" : label}</button>
       <button class="del-btn quiet" type="button" aria-label="Delete document">
-        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
         <span>Delete</span>
       </button>
     </div>`,
