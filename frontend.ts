@@ -1980,9 +1980,11 @@ provKeyRemove.addEventListener("click", () => {
   provKey.value = "";
   provKey.placeholder = "The key will be removed when you save";
   provKeyRemove.hidden = true;
+  showKeyHint();
 });
 provKey.addEventListener("input", () => {
   if (provKey.value) removeKey = false;
+  showKeyHint();
 });
 
 /** Whether the key held is for where the form now sends Documents. */
@@ -1997,9 +1999,11 @@ function heldKeyApplies(): boolean {
 // The held key belongs to the address it was given for, and the server will
 // not carry it to another one — so say so as soon as the destination changes.
 function showKeyHint() {
-  if (removeKey) return;
   const kind = chosenKind("prov");
   const applies = heldKeyApplies();
+  // OpenRouter reads nothing without a key, and the model is already filled in.
+  provKey.required = kind === "openrouter" && (removeKey || !applies);
+  if (removeKey) return;
   provKey.placeholder = applies
     ? "A key is set — type to replace it"
     : !state.provider?.hasKey
@@ -2008,8 +2012,6 @@ function showKeyHint() {
         ? "The key held is for your Custom address — enter your OpenRouter key"
         : "The key held is for the old address — enter one if this address needs it";
   provKeyRemove.hidden = !applies;
-  // OpenRouter reads nothing without a key, and the Model is already filled in.
-  provKey.required = kind === "openrouter" && !applies;
 }
 
 provUrl.addEventListener("input", showKeyHint);

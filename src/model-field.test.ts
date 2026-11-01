@@ -8,23 +8,25 @@ const FORMS = ["prov", "setup-prov"];
 async function page() {
   const window = new Window();
   return new window.DOMParser().parseFromString(
-    await Bun.file("index.html").text(),
+    await Bun.file(`${import.meta.dir}/../index.html`).text(),
     "text/html",
   );
 }
 
-const input = (doc: Awaited<ReturnType<typeof page>>, id: string) =>
+type Page = Awaited<ReturnType<typeof page>>;
+
+const input = (doc: Page, id: string) =>
   doc.getElementById(id) as unknown as { value: string };
 
 /** What a form's list suggests: each model, with the label it carries. */
-const offers = (doc: Awaited<ReturnType<typeof page>>, form: string) =>
+const offers = (doc: Page, form: string) =>
   [...doc.querySelectorAll(`#${form}-models option`)].map((o) => [
     o.getAttribute("value"),
     o.getAttribute("label"),
   ]);
 
 for (const form of FORMS) {
-  test(`${form}: with no Provider saved, OpenRouter's Model starts as the Recommended model`, async () => {
+  test(`${form}: with no Provider saved, OpenRouter's model starts as the Recommended model`, async () => {
     const doc = await page();
 
     modelField(doc, form).fill("openrouter", "");
@@ -135,5 +137,41 @@ for (const form of FORMS) {
     field.switchKind("custom");
 
     expect(offers(doc, form)).toEqual([]);
+  });
+
+  test(`${form}: a Custom address listing that model neither moves nor labels it`, async () => {
+    const doc = await page();
+    const field = modelField(doc, form);
+    field.fill("custom", "");
+
+    field.offer(["a/first", "google/gemini-3.6-flash"]);
+
+    expect(offers(doc, form)).toEqual([
+      ["a/first", null],
+      ["google/gemini-3.6-flash", null],
+    ]);
+  });
+
+  test(`${form}: listing models empties a field left on the Recommended model, so all of them show`, async () => {
+    const doc = await page();
+    const field = modelField(doc, form);
+    field.fill("openrouter", "");
+
+    field.offer(["a/first", "google/gemini-3.6-flash"]);
+
+    expect(input(doc, `${form}-model`).value).toBe("");
+  });
+
+  test(`${form}: listing models leaves a typed model, and an empty listing leaves the field`, async () => {
+    const doc = await page();
+    const field = modelField(doc, form);
+    field.fill("openrouter", "");
+
+    field.offer([]);
+    expect(input(doc, `${form}-model`).value).toBe("google/gemini-3.6-flash");
+
+    input(doc, `${form}-model`).value = "qwen/qwen3-vl";
+    field.offer(["a/first"]);
+    expect(input(doc, `${form}-model`).value).toBe("qwen/qwen3-vl");
   });
 }

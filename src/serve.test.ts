@@ -2213,6 +2213,34 @@ test("models aren't listed for a Custom Provider at OpenRouter's address", async
   }
 });
 
+test("OpenRouter's models aren't listed at all when its Zero retention list can't be read", async () => {
+  const models = Bun.serve({
+    port: 0,
+    fetch(req) {
+      return new URL(req.url).pathname === "/api/v1/models"
+        ? Response.json({ data: [] })
+        : new Response("down", { status: 503 });
+    },
+  });
+  const before = process.env.OPENROUTER_BASE_URL;
+  process.env.OPENROUTER_BASE_URL = `http://127.0.0.1:${models.port}/api/v1`;
+  const server = startServer(0, library);
+  try {
+    const res = await fetch(`${base(server)}/api/provider/models`, {
+      method: "POST",
+      headers: { cookie: authCookie(), "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "openrouter" }),
+    });
+
+    expect(res.status).toBe(502);
+  } finally {
+    if (before === undefined) delete process.env.OPENROUTER_BASE_URL;
+    else process.env.OPENROUTER_BASE_URL = before;
+    server.stop(true);
+    models.stop(true);
+  }
+});
+
 test("an address that cannot list its models says so, rather than offering none", async () => {
   const server = startServer(0, library);
   try {

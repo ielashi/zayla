@@ -477,18 +477,18 @@ export async function listOpenRouterModels(
   zeroRetention: boolean,
 ): Promise<string[]> {
   const listed = await listingAt(baseUrl, "/models", apiKey);
-  const readers = idsOf(listed.filter(readsDocuments), "id");
-  if (!zeroRetention) return readers;
-  const hosted = await listingAt(baseUrl, "/endpoints/zdr", apiKey);
-  const kept = new Set(idsOf(hosted, "model_id"));
-  return readers.filter((id) => kept.has(id));
+  const readable = idsOf(listed.filter(readsDocuments), "id");
+  if (!zeroRetention) return readable;
+  const hosts = await listingAt(baseUrl, "/endpoints/zdr", apiKey);
+  const hosted = new Set(idsOf(hosts, "model_id"));
+  return readable.filter((id) => hosted.has(id));
 }
 
 /**
  * Whether an entry of OpenRouter's `GET /models` can read a Document and answer
  * in words. Images and PDFs must both be its own input: OpenRouter sends a PDF
- * for a model without `file` through OCR first, a charge and a reader of its
- * own. A `:batch` model is for OpenRouter's batch API, not for a request that
+ * for a model without `file` through OCR first, which costs extra and
+ * sends the Document somewhere else as well. A `:batch` model is for OpenRouter's batch API, not for a request that
  * waits on its answer.
  */
 function readsDocuments(entry: Record<string, unknown>): boolean {

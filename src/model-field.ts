@@ -1,13 +1,11 @@
 /**
  * The Model field of a Provider form, in Settings and in Setup alike: what it
- * holds, and what it suggests. It reaches the page only through what it is
- * given, so it stays out of the server's DOM-less typecheck and can be tested
- * against the real page without one running.
+ * holds, and what it suggests. It names only the parts of the page it uses
+ * rather than the DOM's types, because the server's typecheck, which has none,
+ * reads it too, and so the tests can hand it the real page without running it.
  */
+import { RECOMMENDED_MODEL } from "./core/openrouter.ts";
 import type { ProviderKind } from "./shared.ts";
-
-/** The model suggested for an OpenRouter Provider. Changed by release. */
-export const RECOMMENDED_MODEL = "google/gemini-3.6-flash";
 
 /** As much of a document as a Model field needs. */
 type Page = {
@@ -36,17 +34,21 @@ export function modelField(page: Page, prefix: string) {
     model.value = RECOMMENDED_MODEL;
   });
 
+  let shownKind: ProviderKind = "openrouter";
+
+  /** Draw the field for a Provider of this kind holding `id`, or none. */
+  const fill = (kind: ProviderKind, id: string) => {
+    shownKind = kind;
+    model.value = id || (kind === "openrouter" ? RECOMMENDED_MODEL : "");
+    note.hidden = kind !== "openrouter";
+    list.replaceChildren();
+  };
+
   return {
-    /** Draw the field for a Provider of this kind holding `saved`, or none. */
-    fill(kind: ProviderKind, saved: string) {
-      model.value = saved || (kind === "openrouter" ? RECOMMENDED_MODEL : "");
-      note.hidden = kind !== "openrouter";
-      list.replaceChildren();
-    },
+    fill,
     /** The form changed kind: only what Zayla put in the field goes with it. */
     switchKind(kind: ProviderKind) {
-      const typed = model.value === RECOMMENDED_MODEL ? "" : model.value;
-      this.fill(kind, typed);
+      fill(kind, model.value === RECOMMENDED_MODEL ? "" : model.value);
     },
     /** Drop the suggestions: they were for another destination. */
     forgetOffers() {
@@ -54,17 +56,22 @@ export function modelField(page: Page, prefix: string) {
     },
     /** Suggest these models; returns what to say about them. */
     offer(models: string[]): string {
+      const recommends = shownKind === "openrouter";
       list.replaceChildren(
-        ...recommendedFirst(models).map((id) => {
+        ...(recommends ? recommendedFirst(models) : models).map((id) => {
           const option = page.createElement("option") as {
             setAttribute(name: string, value: string): void;
           };
           option.setAttribute("value", id);
-          if (id === RECOMMENDED_MODEL)
+          if (recommends && id === RECOMMENDED_MODEL)
             option.setAttribute("label", "Recommended");
           return option;
         }),
       );
+      // A browser suggests only what matches the field, so a model left in it
+      // would hide the list just asked for. The note can bring it back.
+      if (recommends && models.length && model.value === RECOMMENDED_MODEL)
+        model.value = "";
       return models.length
         ? `${models.length} model${models.length === 1 ? "" : "s"} offered — pick one, or type an id.`
         : "That address offers no models; type the id instead.";
