@@ -1,9 +1,24 @@
-# Zayla
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/wordmark-dark.svg">
+    <img src="docs/wordmark-light.svg" alt="Zayla" height="56">
+  </picture>
+</p>
 
-**A self-hosted, open-source document archive, organized by AI.**
+<p align="center"><strong>A self-hosted, open-source document archive, organized by AI.</strong></p>
 
-Drop in your letters, bills, contracts, IDs and handwritten notes, and find any
-of them in seconds, whatever language they're in.
+<p align="center">
+  Drop in your letters, bills, contracts, IDs and handwritten notes, and find any
+  of them in seconds, whatever language they're in.
+</p>
+
+<p align="center">
+  <a href="#how-it-works">How it works</a>
+  ·
+  <a href="#install-with-docker">Install</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/hero-dark.webp">
