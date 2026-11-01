@@ -71,7 +71,7 @@ A person or organization is named by an id as \`entities\` prints it (#4, or jus
 or by any spelling the library has seen it under.
 
 The library lives at ./library (override with LIBRARY_DIR). Passkeys are offered
-once ZAYLA_URL names the address Zayla is opened at, e.g. https://docs.example.com.
+once ZAYLA_URL names the address Zayla is opened at, e.g. https://zayla.example.com.
 
 One process changes the library at a time. While the server runs, the commands
 that change it (import, enrich, merge, unmerge, delete, auth-password and

@@ -19,4 +19,4 @@ services:
     # Passkeys need the address you open Zayla at, behind HTTPS. Without it,
     # you sign in with a password.
     # environment:
-    #   ZAYLA_URL: https://docs.example.com
+    #   ZAYLA_URL: https://zayla.example.com
