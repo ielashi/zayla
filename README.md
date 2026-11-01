@@ -12,8 +12,8 @@ of them in seconds, whatever language they're in.
 
 ## How it works
 
-1. **Drop in anything.** Letters, bills, contracts, IDs and handwritten notes, as
-   PDFs or photos.
+1. **Drop in anything.** Letters, bills, contracts, IDs and handwritten notes,
+   as PDFs or photos.
 2. **Zayla reads it for you.** AI extracts a transcription, metadata, and
    generates a summary in all the languages you speak. You choose the model,
    hosted or on your own hardware.
