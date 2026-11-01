@@ -1,0 +1,297 @@
+/* A name and the count of Documents it accounts for, in the sidebar and in
+   the browse lists alike, so a count reads the same wherever it is shown. */
+.ent-count {
+  flex: none;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+/* Available to a screen reader, which cannot see that the column is a count. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The browse lists: one list per page, its rows divided rather than each a
+   card of its own, since a list runs to dozens. Organizations are the spine,
+   each a heading with the People who appeared for it beneath; People
+   belonging to none are a list of their own. A column wide enough that a
+   name, its marks and its count sit on one line. */
+.entities {
+  max-width: 760px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.entities > :where(li + li),
+.org + .org {
+  border-top: 1px solid var(--line);
+}
+/* Every row is a link to that entity's own page, which is what the lists are
+   for; the whole row is the target rather than the name within it. */
+.ent {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s var(--ease);
+}
+.ent-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  word-break: break-word;
+}
+/* An Organization heads its section: the heading is the row, set as one. */
+.org-head {
+  margin: 0;
+  font: inherit;
+}
+.org-head .ent-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+/* The People under an Organization, set back from it and lighter: they belong
+   to the heading above rather than standing beside it, so their dividers
+   start where they do. */
+.under {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.under > :where(li) {
+  margin-left: 24px;
+  border-top: 1px solid var(--line-soft);
+}
+.under .ent {
+  padding: 8px 16px 8px 12px;
+}
+.under .ent-name {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.ent:hover {
+  background: var(--line-soft);
+}
+/* --ink-faint is too faint to read on a hovered or selected row's step. */
+:is(.ent:hover, .shortcuts a:hover, .shortcuts a[aria-current]) .ent-count {
+  color: var(--ink-soft);
+}
+.ent:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* One entity's own page: who they are, then their Documents under the part
+   they played in each. The groups are the page's order, which is why each
+   carries its heading above an ordinary grid of cards. */
+.ent-page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.ep-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 620px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+}
+.ep-head h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 0;
+  word-break: break-word;
+}
+.ep-count {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.ep-facts a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.ep-facts a:hover {
+  text-decoration: underline;
+}
+.ep-role h3,
+.ep-alike h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+
+/* What the owner can do to a name, on the page that shows the name: saying it
+   is the same as another, and taking such a statement back. */
+.ep-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ep-same {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+  transition: border-color 0.15s var(--ease);
+}
+.ep-same:hover {
+  border-color: var(--ink-faint);
+}
+.ep-same:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ep-same:disabled {
+  color: var(--ink-faint);
+  background: var(--line-soft);
+  cursor: default;
+  border-color: transparent;
+}
+/* A name merged in, with the one Merge that can be taken back beside it. */
+.ep-merged {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-right: 12px;
+}
+.ep-undo {
+  min-height: 24px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.ep-undo:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.ep-undo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The names that look like this one. A suggestion, so it is set as a question
+   the owner may leave alone rather than as something needing to be cleared. */
+.ep-alike {
+  max-width: 620px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 24px;
+}
+.ep-alike .ep-note {
+  margin: -8px 0 12px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.ep-alike ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ep-alike li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ep-alike li a {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-word;
+}
+.ep-alike li a:hover {
+  text-decoration: underline;
+}
+/* The same question in a browse list, where there is room for a word and not
+   for the pair: the row leads to the page that can answer it. A question
+   rather than a warning, so it is said in the row's own small type, tinted
+   and marked with a dot, rather than shouted from a filled capitals label. */
+.ent-alike {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--notice);
+  white-space: nowrap;
+}
+.ent-alike::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+/* The Person the reader has marked as Me, labelled wherever they are shown:
+   as a row of a browse list, and at the head of their own page. */
+.me-tag {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+/* In the page's heading it stands beside serif display type rather than in a
+   row of its own, so it is lifted off that baseline instead of sharing it. */
+.ep-head h2 .me-tag {
+  margin-left: 8px;
+}
+/* Where the mark is made: beside "Same as…" in the row of what the owner can
+   do to a name, and quieter than it — a statement made once about whose
+   paperwork this is, not the thing the page is for. */
+.me-btn {
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-color: var(--line);
+  transition:
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+.me-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.me-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

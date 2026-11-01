@@ -17,6 +17,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock ./
 COPY index.html frontend.ts ./
+COPY styles ./styles
 COPY public ./public
 COPY src ./src
 ENV NODE_ENV=production LIBRARY_DIR=/data PORT=3000
