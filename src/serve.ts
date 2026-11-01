@@ -208,6 +208,40 @@ async function importUpload(
 }
 
 /**
+ * The types the browser may open in place, which run nothing from the file. It
+ * is a list of what is known to be safe, so that a type nobody thought about is
+ * downloaded.
+ */
+const OPENS_IN_PLACE = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+/**
+ * A Document's Original, which anyone may have written, served from the origin
+ * the owner is signed in to. Anything that doesn't open in place is downloaded
+ * and sandboxed, so a page in a Library from before they were refused never
+ * runs as the owner. An `<img>` ignores both, so an SVG still shows as a
+ * picture. A PDF gets no sandbox, which would keep it from the browser's viewer.
+ */
+function originalResponse(lib: Library, d: DocumentRecord): Response {
+  const inPlace = OPENS_IN_PLACE.has(d.mime);
+  return new Response(Bun.file(objectPath(lib.root, d.hash, d.ext)), {
+    headers: {
+      "Content-Type": d.mime,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Disposition": `${inPlace ? "inline" : "attachment"}; filename="${encodeURIComponent(d.filename)}"`,
+      ...(inPlace
+        ? {}
+        : { "Content-Security-Policy": "sandbox; default-src 'none'" }),
+    },
+  });
+}
+
+/**
  * The page a mistyped address gets, and the only place these words live: the
  * application itself never renders a not-found view, because it is only ever
  * served at a registered path. It carries no palette of its own on purpose — the
@@ -721,12 +755,7 @@ export function startServer(port: number, lib: Library) {
         const matches = findDocumentsByPrefix(lib, req.params.hash);
         const d = matches.length === 1 ? matches[0] : undefined;
         if (!d) return new Response("not found", { status: 404 });
-        return new Response(Bun.file(objectPath(lib.root, d.hash, d.ext)), {
-          headers: {
-            "Content-Type": d.mime,
-            "Content-Disposition": `inline; filename="${encodeURIComponent(d.filename)}"`,
-          },
-        });
+        return originalResponse(lib, d);
       },
 
       // The first-page thumbnail, rendered on first request (PDFs) and cached
@@ -760,9 +789,7 @@ export function startServer(port: number, lib: Library) {
         }
         if (d.mime.startsWith("image/")) {
           // An image is its own thumbnail.
-          return new Response(Bun.file(objectPath(lib.root, d.hash, d.ext)), {
-            headers: { "Content-Type": d.mime },
-          });
+          return originalResponse(lib, d);
         }
         return new Response("not found", { status: 404 });
       },
@@ -784,10 +811,7 @@ export function startServer(port: number, lib: Library) {
           return new Response("not found", { status: 404 });
 
         const original = objectPath(lib.root, d.hash, d.ext);
-        if (d.mime.startsWith("image/"))
-          return new Response(Bun.file(original), {
-            headers: { "Content-Type": d.mime },
-          });
+        if (d.mime.startsWith("image/")) return originalResponse(lib, d);
         const rendered = pagePath(lib.root, d.hash, n);
         if (!(await Bun.file(rendered).exists())) {
           try {

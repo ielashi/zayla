@@ -134,6 +134,16 @@ export async function sniffMime(path: string): Promise<string> {
   return magicMime(head) ?? (Bun.file(path).type || "application/octet-stream");
 }
 
+/**
+ * Whether a browser would treat this type as a page of its own, running what
+ * is in it: HTML, and everything XML, which covers SVG and XHTML. A Document
+ * can be written by anyone, and no Document needs to be one of these.
+ */
+export function isPageType(mime: string): boolean {
+  const type = mime.split(";")[0]?.trim().toLowerCase() ?? "";
+  return type === "text/html" || /[/+]xml$/.test(type);
+}
+
 function magicMime(b: Uint8Array): string | null {
   if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46)
     return "application/pdf"; // %PDF
