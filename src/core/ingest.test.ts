@@ -15,7 +15,7 @@ import {
   listDocuments,
   openLibrary,
 } from "./db.ts";
-import { importFile } from "./ingest.ts";
+import { importFile, RefusedType } from "./ingest.ts";
 import { objectPath } from "./library.ts";
 import { readTranscriptionSync, writeTranscription } from "./transcription.ts";
 
@@ -117,4 +117,35 @@ test("a second import of a file still in flight leaves the first one's Transcrip
   const done = await Promise.all(imports);
   expect(done.filter((d) => !d.deduped)).toHaveLength(1);
   expect(readTranscriptionSync(TMP, hash)).toBe("Rechnung Nr. 4711");
+});
+
+test.each([
+  "page.html",
+  "page.htm",
+  "page.xhtml",
+  "drawing.svg",
+  "data.xml",
+  "style.xsl",
+])("refuses %s, and files nothing", async (name) => {
+  const path = join(FIXDIR, name);
+  await Bun.write(path, "<script>alert(1)</script>");
+
+  await expect(importFile(library, path)).rejects.toBeInstanceOf(RefusedType);
+  expect(listDocuments(library)).toEqual([]);
+});
+
+test("a PDF with a page's extension is filed by what it holds", async () => {
+  const path = join(FIXDIR, "really-a.html");
+  await Bun.write(path, "%PDF-1.4\n% named as a page\n");
+
+  const res = await importFile(library, path);
+  expect(getDocument(library, res.hash)?.mime).toBe("application/pdf");
+});
+
+test("a format with no page in it is still filed", async () => {
+  const path = join(FIXDIR, "letter.docx");
+  await Bun.write(path, "not really a docx");
+
+  const res = await importFile(library, path);
+  expect(getDocument(library, res.hash)?.ext).toBe("docx");
 });

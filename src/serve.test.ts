@@ -18,6 +18,7 @@ import {
   openLibrary,
   updateEnrichment,
 } from "./core/db.ts";
+import { objectPath } from "./core/library.ts";
 import { writeTranscription } from "./core/transcription.ts";
 import { startServer } from "./serve.ts";
 import type {
@@ -3430,6 +3431,104 @@ test("with everyone removed after boot, Setup says a restart prints a code", asy
     expect(((await res.json()) as { error: string }).error).toContain(
       "restart",
     );
+  } finally {
+    server.stop(true);
+  }
+});
+
+/**
+ * File a Document as a Library from before such files were refused holds it,
+ * returning its hash.
+ */
+async function alreadyFiled(ext: string, mime: string): Promise<string> {
+  const hash = "a".repeat(64);
+  await Bun.write(objectPath(library.root, hash, ext), "<script></script>");
+  insertDocument(library, {
+    hash,
+    ext,
+    mime,
+    filename: `old.${ext}`,
+    bytes: 17,
+    status: "imported",
+    addedAt: new Date().toISOString(),
+  });
+  return hash;
+}
+
+test("uploading a page is refused, for that file alone", async () => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const form = new FormData();
+    form.append("files", new File(["<html>"], "page.html"));
+    form.append("files", pngBlob());
+    const res = await fetch(`${base(server)}/api/documents`, {
+      method: "POST",
+      headers: { cookie },
+      body: form,
+    });
+    const [page, png] = (await res.json()) as (ApiItem & { error?: string })[];
+    expect(page?.filename).toBe("page.html");
+    expect(page?.error).toContain("page.html");
+    expect(png?.mime).toBe("image/png");
+  } finally {
+    server.stop(true);
+  }
+});
+
+test.each([
+  ["html", "text/html;charset=utf-8"],
+  ["xml", "application/xml"],
+])("an Original of type %s is only ever downloaded", async (ext, mime) => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const hash = await alreadyFiled(ext, mime);
+    const res = await fetch(`${base(server)}/api/documents/${hash}/original`, {
+      headers: { cookie },
+    });
+    expect(res.headers.get("content-disposition")).toStartWith("attachment");
+    expect(res.headers.get("content-security-policy")).toContain("sandbox");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  } finally {
+    server.stop(true);
+  }
+});
+
+test.each(["original", "thumb", "pages/1"])(
+  "an SVG already filed runs nothing at %s",
+  async (route) => {
+    const server = startServer(0, library);
+    try {
+      const cookie = authCookie();
+      const hash = await alreadyFiled("svg", "image/svg+xml");
+      const res = await fetch(
+        `${base(server)}/api/documents/${hash}/${route}`,
+        { headers: { cookie } },
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-disposition")).toStartWith("attachment");
+      expect(res.headers.get("content-security-policy")).toContain("sandbox");
+    } finally {
+      server.stop(true);
+    }
+  },
+);
+
+test.each([
+  ["a PDF", () => pdfBlob(1)],
+  ["an image", pngBlob],
+])("%s still opens in the browser, unsniffed", async (_, file) => {
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const { hash } = await importOne(server, cookie, file());
+    const res = await fetch(`${base(server)}/api/documents/${hash}/original`, {
+      headers: { cookie },
+    });
+    expect(res.headers.get("content-disposition")).toStartWith("inline");
+    expect(res.headers.get("content-security-policy")).toBeNull();
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   } finally {
     server.stop(true);
   }

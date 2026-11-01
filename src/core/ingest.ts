@@ -11,6 +11,7 @@ import {
 import { aboutDir, derivedDir, ensureDirs, objectPath } from "./library.ts";
 import {
   hasObject,
+  isPageType,
   putObject,
   removeObject,
   sha256File,
@@ -24,6 +25,13 @@ export type ImportResult = {
   deduped: boolean;
   path: string;
 };
+
+/** A file of a type the Library does not take, as `isPageType` says. */
+export class RefusedType extends Error {
+  constructor(filename: string) {
+    super(`${filename}: web pages, SVG and XML can't be added`);
+  }
+}
 
 /**
  * Ingest a file into the library: hash it, store the original content-addressed,
@@ -39,8 +47,9 @@ export async function importFile(
 
   const ext = extname(srcPath).replace(/^\./, "").toLowerCase();
   const bytes = info.size;
-  const hash = await sha256File(srcPath);
   const mime = await sniffMime(srcPath);
+  if (isPageType(mime)) throw new RefusedType(basename(srcPath));
+  const hash = await sha256File(srcPath);
 
   ensureDirs(lib.root);
 
