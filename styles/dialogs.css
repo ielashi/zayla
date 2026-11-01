@@ -247,6 +247,17 @@
   font-size: 12px;
   color: var(--ink-faint);
 }
+:is(.same-as, .setup-step) .prov-recommended[hidden] {
+  display: none;
+}
+:is(.same-as, .setup-step) .prov-use {
+  padding: 0;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  background: none;
+  border: none;
+}
 .prov-row {
   display: flex;
   gap: 8px;

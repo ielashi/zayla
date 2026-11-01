@@ -2,7 +2,8 @@
   "name": "zayla",
   "devDependencies": {
     "@biomejs/biome": "2.5.4",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "happy-dom": "^21.0.4"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -2047,14 +2047,29 @@ test("listing models at the Provider's own address uses the key it already holds
 /**
  * A stand-in for OpenRouter: it offers these models, of which only some have
  * an endpoint that keeps nothing, listed once per host as OpenRouter lists them.
+ * A model reads images and PDFs and answers in text unless `architectures` says
+ * otherwise.
  */
-function fakeOpenRouter(models: string[], zeroRetention: string[]) {
+function fakeOpenRouter(
+  models: string[],
+  zeroRetention: string[],
+  architectures: Record<string, unknown> = {},
+) {
+  const readsDocuments = {
+    input_modalities: ["text", "image", "file"],
+    output_modalities: ["text"],
+  };
   const server = Bun.serve({
     port: 0,
     fetch(req) {
       const path = new URL(req.url).pathname;
       if (path === "/api/v1/models")
-        return Response.json({ data: models.map((id) => ({ id })) });
+        return Response.json({
+          data: models.map((id) => ({
+            id,
+            architecture: architectures[id] ?? readsDocuments,
+          })),
+        });
       if (path === "/api/v1/endpoints/zdr")
         return Response.json({
           data: zeroRetention.flatMap((id) => [
@@ -2099,6 +2114,76 @@ test("OpenRouter's models are those with a Zero retention host, unless it is tur
     expect(await list({ kind: "openrouter", zeroRetention: false })).toEqual({
       models: ["gemma", "kept/logs", "qwen/x"],
     });
+  } finally {
+    server.stop(true);
+    openRouter.stop();
+  }
+});
+
+test("OpenRouter's models are only those that read images and PDFs themselves and answer in text", async () => {
+  const offered = [
+    "reads/all",
+    "reads/all:batch",
+    "needs/ocr",
+    "text/only",
+    "no/images",
+    "draws/too",
+    "says/nothing",
+  ];
+  const openRouter = fakeOpenRouter(offered, offered, {
+    "needs/ocr": {
+      input_modalities: ["text", "image"],
+      output_modalities: ["text"],
+    },
+    "text/only": { input_modalities: ["text"], output_modalities: ["text"] },
+    "no/images": {
+      input_modalities: ["text", "file"],
+      output_modalities: ["text"],
+    },
+    "draws/too": {
+      input_modalities: ["text", "image", "file"],
+      output_modalities: ["text", "image"],
+    },
+    "says/nothing": {},
+  });
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const list = async (body: unknown) =>
+      (
+        await fetch(`${base(server)}/api/provider/models`, {
+          method: "POST",
+          headers: { cookie, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+      ).json();
+
+    expect(await list({ kind: "openrouter" })).toEqual({
+      models: ["reads/all"],
+    });
+    expect(await list({ kind: "openrouter", zeroRetention: false })).toEqual({
+      models: ["reads/all"],
+    });
+  } finally {
+    server.stop(true);
+    openRouter.stop();
+  }
+});
+
+test("a model OpenRouter hosts with Zero retention but does not otherwise list is not offered", async () => {
+  const openRouter = fakeOpenRouter(
+    ["reads/all"],
+    ["reads/all", "embeds/only"],
+  );
+  const server = startServer(0, library);
+  try {
+    const res = await fetch(`${base(server)}/api/provider/models`, {
+      method: "POST",
+      headers: { cookie: authCookie(), "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "openrouter" }),
+    });
+
+    expect(await res.json()).toEqual({ models: ["reads/all"] });
   } finally {
     server.stop(true);
     openRouter.stop();

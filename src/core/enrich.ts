@@ -463,25 +463,58 @@ export function clearProvider(lib: Library, userId: string): void {
  * the address does not answer with a list, so an unreachable server is not
  * mistaken for one that offers nothing.
  */
-export const listModels = (baseUrl: string, apiKey?: string | null) =>
-  modelIdsAt(baseUrl, "/models", "id", apiKey);
+export const listModels = async (baseUrl: string, apiKey?: string | null) =>
+  idsOf(await listingAt(baseUrl, "/models", apiKey), "id");
 
 /**
- * The model ids OpenRouter can read with Zero retention, sorted: those with at
- * least one host on its `GET /endpoints/zdr`, which lists each host apart.
+ * The model ids OpenRouter offers for reading Documents, sorted. With Zero
+ * retention, only those with a host on its `GET /endpoints/zdr`, which lists
+ * each host apart and says nothing of what a model can read.
  */
-export const listZeroRetentionModels = (
+export async function listOpenRouterModels(
   baseUrl: string,
-  apiKey?: string | null,
-) => modelIdsAt(baseUrl, "/endpoints/zdr", "model_id", apiKey);
+  apiKey: string | null,
+  zeroRetention: boolean,
+): Promise<string[]> {
+  const listed = await listingAt(baseUrl, "/models", apiKey);
+  const readers = idsOf(listed.filter(readsDocuments), "id");
+  if (!zeroRetention) return readers;
+  const hosted = await listingAt(baseUrl, "/endpoints/zdr", apiKey);
+  const kept = new Set(idsOf(hosted, "model_id"));
+  return readers.filter((id) => kept.has(id));
+}
 
-/** The model ids in the `data` list an address answers `path` with, each once, sorted. */
-async function modelIdsAt(
+/**
+ * Whether an entry of OpenRouter's `GET /models` can read a Document and answer
+ * in words. Images and PDFs must both be its own input: OpenRouter sends a PDF
+ * for a model without `file` through OCR first, a charge and a reader of its
+ * own. A `:batch` model is for OpenRouter's batch API, not for a request that
+ * waits on its answer.
+ */
+function readsDocuments(entry: Record<string, unknown>): boolean {
+  const { id, architecture } = entry as {
+    id?: unknown;
+    architecture?: { input_modalities?: unknown; output_modalities?: unknown };
+  };
+  if (typeof id !== "string" || id.endsWith(":batch")) return false;
+  const input = architecture?.input_modalities;
+  const output = architecture?.output_modalities;
+  return (
+    Array.isArray(input) &&
+    input.includes("image") &&
+    input.includes("file") &&
+    Array.isArray(output) &&
+    output.length === 1 &&
+    output[0] === "text"
+  );
+}
+
+/** The `data` list an address answers `path` with. */
+async function listingAt(
   baseUrl: string,
   path: string,
-  field: "id" | "model_id",
   apiKey?: string | null,
-): Promise<string[]> {
+): Promise<Record<string, unknown>[]> {
   const res = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
     headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
   });
@@ -491,7 +524,15 @@ async function modelIdsAt(
   } | null;
   if (!Array.isArray(body?.data))
     throw new Error(`${baseUrl} did not answer with a list of models`);
-  const ids = (body.data as Record<string, unknown>[])
+  return body.data;
+}
+
+/** The model ids in a listing's `field`, each once, sorted. */
+function idsOf(
+  entries: Record<string, unknown>[],
+  field: "id" | "model_id",
+): string[] {
+  const ids = entries
     .map((entry) => entry[field])
     .filter((id): id is string => typeof id === "string" && id !== "");
   return [...new Set(ids)].sort();

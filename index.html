@@ -189,10 +189,11 @@
       <input id="setup-prov-key" type="password" placeholder="Your OpenRouter key" autocomplete="off" spellcheck="false">
       <label for="setup-prov-model">Model</label>
       <div class="prov-row">
-        <input id="setup-prov-model" type="text" list="setup-prov-models" placeholder="e.g. qwen/qwen3-vl" autocomplete="off" spellcheck="false" required>
+        <input id="setup-prov-model" type="text" list="setup-prov-models" autocomplete="off" spellcheck="false" required>
         <button type="button" id="setup-prov-find" class="prov-aside">List models</button>
       </div>
       <datalist id="setup-prov-models"></datalist>
+      <p class="prov-note prov-recommended" id="setup-prov-recommended" hidden>Recommended: <span id="setup-prov-recommended-name"></span> <button type="button" id="setup-prov-recommended-use" class="prov-use">Use it</button></p>
       <div class="setup-row">
         <button type="button" class="setup-back">Back</button>
         <button type="button" class="setup-skip" id="setup-skip">Skip</button>
@@ -266,10 +267,11 @@
     </div>
     <label for="prov-model">Model</label>
     <div class="prov-row">
-      <input id="prov-model" type="text" list="prov-models" placeholder="e.g. qwen/qwen3-vl" autocomplete="off" spellcheck="false" required>
+      <input id="prov-model" type="text" list="prov-models" autocomplete="off" spellcheck="false" required>
       <button type="button" id="prov-find" class="prov-aside">List models</button>
     </div>
     <datalist id="prov-models"></datalist>
+    <p class="prov-note prov-recommended" id="prov-recommended" hidden>Recommended: <span id="prov-recommended-name"></span> <button type="button" id="prov-recommended-use" class="prov-use">Use it</button></p>
     <div class="same-as-status" id="prov-status" role="status"></div>
     <div class="prov-waiting" id="prov-waiting" hidden></div>
     <div class="same-as-row">

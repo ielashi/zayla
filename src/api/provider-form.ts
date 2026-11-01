@@ -3,7 +3,7 @@
  * offers: shared by Settings' Provider routes and Setup's, which ask the same
  * questions with and without a session.
  */
-import { listModels, listZeroRetentionModels } from "../core/enrich.ts";
+import { listModels, listOpenRouterModels } from "../core/enrich.ts";
 import { isOpenRouterAddress, openRouterAddress } from "../core/openrouter.ts";
 
 /** An http(s) address from a request body, trimmed; null when it is not one. */
@@ -80,18 +80,20 @@ export const noModelsListed = (error: string) =>
   Response.json({ error }, { status: 400 });
 
 /**
- * The models a listing offers, as a response. An address that does not
- * answer is a 502: it was asked, and could not say, which is not the same as
- * offering nothing.
+ * The models a listing offers, as a response: OpenRouter's that can read
+ * Documents, and whatever a Custom address names, since it does not say what
+ * its models can read. An address that does not answer is a 502: it was asked,
+ * and could not say, which is not the same as offering nothing.
  */
 export async function modelsAt(
-  { baseUrl, zeroRetention }: Destination,
+  { kind, baseUrl, zeroRetention }: Destination,
   apiKey: string | null,
 ): Promise<Response> {
   try {
-    const models = zeroRetention
-      ? await listZeroRetentionModels(baseUrl, apiKey)
-      : await listModels(baseUrl, apiKey);
+    const models =
+      kind === "openrouter"
+        ? await listOpenRouterModels(baseUrl, apiKey, zeroRetention)
+        : await listModels(baseUrl, apiKey);
     return Response.json({ models });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 502 });
