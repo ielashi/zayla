@@ -129,7 +129,7 @@ for (const form of FORMS) {
     expect(addControl(doc, form).hidden).toBe(true);
   });
 
-  test(`${form}: a language can be removed, and the next takes its place as main`, async () => {
+  test(`${form}: a language can be removed, and the next takes first place`, async () => {
     const doc = await page();
     const list = languageList(doc, form);
     list.show(["EN", "DE", "AR"]);
@@ -157,7 +157,7 @@ for (const form of FORMS) {
     expect(buttons(doc, form)).toEqual([]);
   });
 
-  test(`${form}: a language moves up past the one before it, and can become main`, async () => {
+  test(`${form}: a language moves up past the one before it, and can reach first place`, async () => {
     const doc = await page();
     const list = languageList(doc, form);
     list.show(["EN", "DE", "AR"]);
@@ -170,7 +170,7 @@ for (const form of FORMS) {
     expect(rows(doc, form)[0]).toEqual(["Arabic", "Main"]);
   });
 
-  test(`${form}: the main language has nowhere to move up to`, async () => {
+  test(`${form}: the first language has nowhere to move up to`, async () => {
     const doc = await page();
     languageList(doc, form).show(["EN", "DE"]);
 
@@ -200,7 +200,7 @@ for (const form of FORMS) {
     expect(focused(doc)).toBe("Move Arabic up");
   });
 
-  test(`${form}: a language that becomes main has no Move up, so focus lands on its Remove`, async () => {
+  test(`${form}: a language that reaches first place has no Move up, so focus lands on its Remove`, async () => {
     const doc = await livePage();
     languageList(doc, form).show(["EN", "DE"]);
 

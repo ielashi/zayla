@@ -29,8 +29,8 @@ type Press = {
   };
 };
 
-const UP = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
-const REMOVE = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+const UP_ICON = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+const REMOVE_ICON = html`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
 
 /** The language list of the form whose ids start with `prefix`. */
 export function languageList(
@@ -58,9 +58,9 @@ export function languageList(
     const group = (label: string, codes: string[]) =>
       codes.length > 0 &&
       html`<optgroup label="${label}">${codes.map(option)}</optgroup>`;
-    const open = OFFERED_LANGUAGES.filter((c) => !languages.includes(c));
-    const tested = TESTED_LANGUAGES.filter((c) => open.includes(c));
-    const untested = open
+    const unchosen = OFFERED_LANGUAGES.filter((c) => !languages.includes(c));
+    const tested = TESTED_LANGUAGES.filter((c) => unchosen.includes(c));
+    const untested = unchosen
       .filter((c) => !TESTED_LANGUAGES.includes(c))
       .sort((a, b) => languageName(a).localeCompare(languageName(b)));
     setHtml(
@@ -80,8 +80,8 @@ export function languageList(
             <span class="lang-name">${languageName(code)}</span>
             ${index === 0 && html`<span class="lang-tag">Main</span>`}
             <span class="lang-actions">
-              ${index > 0 && html`<button type="button" class="lang-btn" data-action="up" data-index="${index}" aria-label="Move ${languageName(code)} up" title="Move up">${UP}</button>`}
-              ${languages.length > 1 && html`<button type="button" class="lang-btn" data-action="remove" data-index="${index}" aria-label="Remove ${languageName(code)}" title="Remove">${REMOVE}</button>`}
+              ${index > 0 && html`<button type="button" class="lang-btn" data-action="up" data-index="${index}" aria-label="Move ${languageName(code)} up" title="Move up">${UP_ICON}</button>`}
+              ${languages.length > 1 && html`<button type="button" class="lang-btn" data-action="remove" data-index="${index}" aria-label="Remove ${languageName(code)}" title="Remove">${REMOVE_ICON}</button>`}
             </span>
           </li>`,
       )}`,
@@ -94,7 +94,7 @@ export function languageList(
     list.querySelector(`[data-action="${action}"][data-index="${index}"]`);
 
   /** Draw what changed, with focus on what it left behind: the old control is gone. */
-  const edited = (focusNext: () => Focusable | null) => {
+  const redrawAfterEdit = (focusNext: () => Focusable | null) => {
     draw();
     focusNext()?.focus();
     onEdit();
@@ -103,7 +103,7 @@ export function languageList(
   picker.addEventListener("change", () => {
     if (!picker.value) return;
     languages.push(picker.value);
-    edited(() =>
+    redrawAfterEdit(() =>
       picker.hidden ? rowButton("remove", languages.length - 1) : picker,
     );
   });
@@ -114,10 +114,10 @@ export function languageList(
     const index = Number(button.getAttribute("data-index"));
     const [code] = languages.splice(index, 1);
     if (button.getAttribute("data-action") === "remove") {
-      edited(() => rowButton("remove", index) ?? picker);
+      redrawAfterEdit(() => rowButton("remove", index) ?? picker);
     } else if (code) {
       languages.splice(index - 1, 0, code);
-      edited(
+      redrawAfterEdit(
         () => rowButton("up", index - 1) ?? rowButton("remove", index - 1),
       );
     }

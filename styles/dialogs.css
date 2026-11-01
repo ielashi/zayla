@@ -48,13 +48,6 @@
   background: var(--paper);
   color: var(--ink);
 }
-.same-as select {
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--paper) var(--select-arrow) no-repeat right 12px center;
-  padding-right: 32px;
-  cursor: pointer;
-}
 .same-as select:focus,
 .same-as input:focus {
   outline: none;
@@ -590,6 +583,7 @@
   background: var(--paper);
   color: var(--ink);
 }
+.same-as select,
 .setup-step select {
   -webkit-appearance: none;
   appearance: none;

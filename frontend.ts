@@ -2436,7 +2436,7 @@ const setupSteps = [
 const setupCode = el<HTMLInputElement>("setup-code");
 const setupPw = el<HTMLInputElement>("setup-pw");
 const setupPwAgain = el<HTMLInputElement>("setup-pw-again");
-const setupLangs = languageList(document, "setup-lang");
+const setupLangList = languageList(document, "setup-lang");
 const setupProvKey = el<HTMLInputElement>("setup-prov-key");
 const setupProvModel = el<HTMLInputElement>("setup-prov-model");
 const setupProvField = modelField(document, "setup-prov");
@@ -2455,7 +2455,9 @@ function showStep(n: number) {
     form.hidden = i !== n;
   });
   setSetupStatus("");
-  setupSteps[n]?.querySelector<HTMLElement>("input, select")?.focus();
+  setupSteps[n]
+    ?.querySelector<HTMLElement>("input, select:not([hidden]), .lang-btn")
+    ?.focus();
 }
 
 /** The browser's language when it is a tested one, else English. */
@@ -2466,7 +2468,7 @@ function browserReadingLanguage(): string {
 
 function showSetup() {
   acceptedCode = "";
-  setupLangs.show([browserReadingLanguage()]);
+  setupLangList.show([browserReadingLanguage()]);
   setup.classList.add("on");
   showStep(0);
 }
@@ -2589,7 +2591,7 @@ async function finishSetup(
       body: JSON.stringify({
         code: acceptedCode,
         password: setupPw.value,
-        languages: setupLangs.languages(),
+        languages: setupLangList.languages(),
         provider,
       }),
     });
