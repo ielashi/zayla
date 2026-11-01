@@ -1,0 +1,688 @@
+#top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--ground);
+  border-bottom: 1px solid var(--line);
+}
+.head-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-block: 16px;
+  flex-wrap: wrap;
+}
+
+.search {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 440px;
+  margin-right: auto;
+}
+.search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+}
+.search input {
+  width: 100%;
+  min-height: 36px;
+  font: inherit;
+  font-size: 14px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+select {
+  min-height: 36px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 28px 0 12px;
+  background: var(--paper) var(--select-arrow) no-repeat right 8px center;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* The section being viewed, in one stacking context below the header that
+   floats over it. Without it, what the view draws is only sometimes beneath
+   that header — a card of its own was painting over the search box — and
+   which one wins would depend on how each view happens to be built. */
+main {
+  position: relative;
+  z-index: 0;
+  padding-block: 24px 64px;
+}
+/* As many columns as fit at 200px or wider, across the whole width. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s var(--ease);
+}
+.card:hover {
+  border-color: var(--ink-faint);
+}
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.thumb {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--placeholder);
+  overflow: hidden;
+  border-bottom: 1px solid var(--line-soft);
+}
+.thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Two-layer thumbnail: a blurred cover copy fills the box (scaled up to hide
+   blur's faded edges) so landscape docs letterbox onto a fill of themselves,
+   with the sharp full document contained on top. */
+.thumb img.bg {
+  object-fit: cover;
+  object-position: center;
+  filter: blur(16px) saturate(1.15);
+  transform: scale(1.3);
+  opacity: 0.6;
+  z-index: 1;
+}
+.thumb img.fg {
+  object-fit: contain;
+  object-position: center;
+  z-index: 2;
+}
+.thumb .ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--placeholder),
+    var(--placeholder) 10px,
+    var(--placeholder-stripe) 10px,
+    var(--placeholder-stripe) 20px
+  );
+}
+.body {
+  padding: 12px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.name {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.meta .dt {
+  color: var(--ink-faint);
+}
+.meta .undated {
+  color: var(--ink-faint);
+}
+.snippet {
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The Transcription passage a search found the card by: longer than a summary
+   line, since the match it exists to show sits mid-passage. */
+.snippet.passage {
+  -webkit-line-clamp: 3;
+}
+.snippet.passage mark {
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+.who {
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.state {
+  text-align: center;
+  padding: 88px 20px;
+  color: var(--ink-soft);
+}
+.state h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.state code {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--line-soft);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--ink);
+}
+/* The empty Library doubles as a click-to-browse target; no other state does. */
+.state-empty {
+  cursor: pointer;
+}
+.state .hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s var(--ease);
+}
+/* "shown", not "open": .open is the "Open original" button, whose fill and
+   padding the scrim would take on. */
+.scrim.shown {
+  opacity: 1;
+  pointer-events: auto;
+}
+.panel {
+  width: min(468px, 100%);
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow-panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(24px);
+  transition: transform 0.24s var(--ease);
+}
+.panel > * {
+  flex: none;
+}
+.scrim.shown .panel {
+  transform: translateX(0);
+}
+
+/* The Document's pages, one above the next on a light canvas, each an image
+   the server rendered, so they look the same in every browser. A page not
+   yet loaded keeps an A4 page's shape, so only those near the viewport load. */
+.viewer {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--canvas);
+}
+.scrim.has-preview .viewer {
+  display: block;
+}
+.viewer:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 1.5vw, 20px);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(12px, 2.5vw, 32px);
+}
+.page {
+  width: 100%;
+  margin: 0;
+  aspect-ratio: 210 / 297;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  outline: 1px solid var(--page-edge);
+}
+/* Loaded, a page is as wide as its image up to the column: a rendered PDF
+   page always fills it, and a small photo isn't blown up past its size. */
+.page.loaded {
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: auto;
+}
+.page img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.page-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-soft);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--placeholder),
+    var(--placeholder) 10px,
+    var(--placeholder-stripe) 10px,
+    var(--placeholder-stripe) 20px
+  );
+}
+.page-missing p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.p-head {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 24px 24px 24px;
+  background: var(--ground);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.p-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+  transition:
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+.p-close:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.p-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.p-thumb {
+  flex: none;
+  width: 92px;
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--placeholder);
+  box-shadow: var(--shadow);
+}
+.p-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+.p-head-text {
+  flex: 1;
+  min-width: 0;
+  padding-right: 32px;
+}
+.p-head h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.25;
+  margin: 8px 0 0;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.p-sec {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.p-sec:last-child,
+.p-sec:has(+ .p-bar) {
+  border-bottom: none;
+}
+/* Along the foot of the panel however little it says or far it is scrolled:
+   what can be done with the Document, or the question one of them asks. */
+.p-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  padding: 16px 24px;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+}
+.del-btn.quiet {
+  margin-left: auto;
+  border-color: transparent;
+}
+.del-btn.quiet svg {
+  display: none;
+}
+.p-sec h3 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+.p-summary {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--ink);
+  margin: 0;
+}
+.p-file {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+  word-break: break-all;
+  margin-top: 12px;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px 16px;
+  font-size: 14px;
+  margin: 0;
+}
+.kv dt {
+  color: var(--ink-soft);
+}
+.kv dd {
+  margin: 0;
+  color: var(--ink);
+  word-break: break-word;
+}
+.kv dd.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.open {
+  color: var(--on-accent);
+  background: var(--accent);
+  text-decoration: none;
+  transition: background 0.15s var(--ease);
+}
+.open:hover {
+  background: var(--accent-hover);
+}
+.open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.proc-btn {
+  color: var(--ink);
+  background: none;
+  border-color: var(--line);
+  transition: border-color 0.15s var(--ease);
+}
+.proc-btn:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+}
+.proc-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.proc-btn.confirm {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.proc-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.proc-btn.busy svg {
+  animation: spin 1s linear infinite;
+}
+.proc-note {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+.del-btn {
+  color: var(--danger);
+  background: none;
+  border-color: var(--line);
+  transition: border-color 0.15s var(--ease);
+}
+.del-btn:hover {
+  border-color: var(--danger);
+}
+.del-btn:focus-visible {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+.del-btn.confirm {
+  color: var(--on-accent);
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.del-btn.cancel {
+  color: var(--ink-soft);
+}
+.del-btn.cancel:hover {
+  border-color: var(--ink-faint);
+  color: var(--ink);
+}
+.del-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.p-ask {
+  font-size: 14px;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+.p-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-btn {
+  color: var(--on-accent);
+  background: var(--accent);
+  transition: background 0.15s var(--ease);
+}
+.add-btn:hover {
+  background: var(--accent-hover);
+}
+.add-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.add-btn svg {
+  flex: none;
+}
+
+.dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: var(--drop-tint);
+  backdrop-filter: blur(2px);
+}
+.dropzone.on {
+  display: flex;
+}
+.dropzone-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--accent);
+  background: var(--drop-card);
+  border: 2px dashed var(--accent);
+  border-radius: 16px;
+  padding: 48px 64px;
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+}
+.dropzone-card p {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card.enriching {
+  pointer-events: none;
+}
+.card.enriching .body {
+  opacity: 0.5;
+}
+.thumb .working {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--working);
+  backdrop-filter: blur(1px);
+  font-size: 12px;
+  font-weight: 500;
+}
+.thumb .working.err {
+  color: var(--ink-soft);
+  background: var(--working-err);
+}
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.card.errored {
+  cursor: pointer;
+}
+.thumb .working.err svg {
+  color: var(--danger-icon);
+}
+.retry-hint {
+  color: var(--accent);
+}
+
+.toasts {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.toast {
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lift);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.24s var(--ease),
+    transform 0.24s var(--ease);
+  max-width: 80vw;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast.err {
+  background: var(--danger);
+}

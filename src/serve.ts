@@ -211,7 +211,7 @@ async function importUpload(
  * The page a mistyped address gets, and the only place these words live: the
  * application itself never renders a not-found view, because it is only ever
  * served at a registered path. It carries no palette of its own on purpose — the
- * tokens live in index.html's stylesheet, and restating them here would leave a
+ * tokens live in styles/tokens.css, and restating them here would leave a
  * copy to drift. Layout only, so a dead end looks deliberate, not broken.
  */
 const NOT_FOUND_PAGE = `<!doctype html>

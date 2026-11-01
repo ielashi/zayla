@@ -1,0 +1,93 @@
+:root {
+  color-scheme: light dark;
+  --ground: #f4f6f9;
+  --paper: #ffffff;
+  --ink: #1b1e26;
+  --ink-soft: #626b7c;
+  --ink-faint: #697181;
+  --line: #e4e8ee;
+  --line-soft: #eef1f5;
+  --accent: #2d4a7c;
+  --accent-soft: #eaf0f8;
+  --accent-hover: #26406b;
+  /* Text set on a fill: on the accent or the danger colour, and on ink. */
+  --on-accent: #ffffff;
+  --on-ink: #ffffff;
+  --danger: #8a2e1c;
+  --danger-icon: #b4472f;
+  /* A question the owner may leave alone, like "Possible duplicate". */
+  --notice: #8a5a1c;
+  --notice-soft: #fbf1e2;
+  /* Where a Document's picture is, or will be. */
+  --placeholder: #edeff3;
+  --placeholder-stripe: #e7eaf0;
+  /* What a Document's pages lie on in the viewer, a shade below the page. */
+  --canvas: #e6e9ef;
+  /* Laid over a card's picture while its Document is being read, waits to
+     be, or could not be. */
+  --working: rgba(237, 239, 243, 0.72);
+  --working-wait: rgba(237, 239, 243, 0.8);
+  --working-err: rgba(237, 239, 243, 0.86);
+  /* What floats over the page: the dimming behind a dialog or the Document
+     panel, and the drop target. */
+  --scrim: rgba(20, 24, 33, 0.42);
+  --drop-tint: rgba(45, 74, 124, 0.14);
+  --drop-card: rgba(255, 255, 255, 0.92);
+  /* The chevron a select draws, in --ink-soft. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23626B7C' stroke-width='1.75'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  --serif: Georgia, "Times New Roman", serif;
+  --sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 12px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* The phone's bottom tab bar, which the content and toasts stay clear of. */
+  --tabs-h: 58px;
+  --shadow: 0 1px 2px rgba(27, 30, 38, 0.04), 0 6px 20px rgba(27, 30, 38, 0.06);
+  --shadow-lift:
+    0 2px 4px rgba(27, 30, 38, 0.06), 0 16px 40px rgba(27, 30, 38, 0.12);
+  --shadow-panel: -20px 0 60px rgba(20, 24, 33, 0.2);
+  /* The edge drawn just outside a page's image in the viewer, so a white
+     page has one against a dark canvas; in light, its shadow is enough. */
+  --page-edge: transparent;
+}
+/* The same tokens for a system set to dark: Zayla follows it, with no switch
+   of its own. Every colour above is restated here; what isn't a colour is
+   shared. A Document's pictures are never inverted or dimmed — a page keeps
+   its real colours and gets a faint edge instead, so a white page sits on
+   the dark ground rather than glaring out of it. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #121419;
+    --paper: #1b1e25;
+    --ink: #e6e8ec;
+    --ink-soft: #a3aab7;
+    --ink-faint: #8f97a5;
+    --line: #2c313b;
+    --line-soft: #242830;
+    --accent: #8fb0e8;
+    --accent-soft: #23324a;
+    --accent-hover: #a7c2ee;
+    --on-accent: #10141b;
+    --on-ink: #121419;
+    --danger: #f0937d;
+    --danger-icon: #e07a62;
+    --notice: #e3b472;
+    --notice-soft: #3a2e1c;
+    --placeholder: #23272f;
+    --placeholder-stripe: #262a33;
+    --canvas: #0e1014;
+    --working: rgba(27, 30, 37, 0.72);
+    --working-wait: rgba(27, 30, 37, 0.88);
+    --working-err: rgba(27, 30, 37, 0.88);
+    --scrim: rgba(0, 0, 0, 0.6);
+    --drop-tint: rgba(143, 176, 232, 0.14);
+    --drop-card: rgba(27, 30, 37, 0.92);
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A3AAB7' stroke-width='1.75'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    --shadow: none;
+    --shadow-lift:
+      0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.45);
+    --shadow-panel: -20px 0 60px rgba(0, 0, 0, 0.5);
+    --page-edge: rgba(255, 255, 255, 0.12);
+  }
+}

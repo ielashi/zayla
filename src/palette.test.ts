@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 
 /**
- * The palette is index.html's design tokens: one set on `:root`, and a second
- * under `prefers-color-scheme: dark`. These tests read both straight from the
- * stylesheet, so a token changed there is checked here without a copy to drift.
+ * The palette is styles/tokens.css: one set on `:root`, and a second under
+ * `prefers-color-scheme: dark`. These tests read both straight from that file,
+ * so a token changed there is checked here without a copy to drift.
  */
+const css = await Bun.file(`${import.meta.dir}/../styles/tokens.css`).text();
 const html = await Bun.file(`${import.meta.dir}/../index.html`).text();
 
 /** The `--name: value` declarations in a block of CSS. */
@@ -15,9 +16,9 @@ function tokensIn(css: string): Map<string, string> {
   return tokens;
 }
 
-const lightBlock = html.match(/<style>\s*:root\s*\{([^}]*)\}/)?.[1] ?? "";
+const lightBlock = css.match(/^:root\s*\{([^}]*)\}/m)?.[1] ?? "";
 const darkBlock =
-  html.match(
+  css.match(
     /@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]*)\}/,
   )?.[1] ?? "";
 const light = tokensIn(lightBlock);

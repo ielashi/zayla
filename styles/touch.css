@@ -1,0 +1,62 @@
+@media (max-width: 760px) {
+  /* Fingers rather than a pointer: every control at least 44px each way, and
+     every field set at 16px, below which iOS zooms the page on focus. Imported
+     last, so it wins over the rules each control is styled by above. */
+  .ep-facts a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .ent,
+  .ep-alike li a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .add-btn,
+  .logout-btn,
+  select,
+  .search input,
+  .ep-same,
+  .me-btn,
+  .ep-undo,
+  .open,
+  .del-btn,
+  .proc-btn,
+  .p-bar :is(.open, .proc-btn, .del-btn),
+  .same-as select,
+  .same-as input,
+  .same-as-row button,
+  .prov-aside,
+  #prov-clear,
+  .settings-tabs button,
+  .prov-waiting button,
+  .waiting-notice button,
+  .gate-btn,
+  .gate-pw input,
+  .setup-step input,
+  .setup-step select,
+  .setup-back,
+  .setup-skip {
+    min-height: 44px;
+  }
+  :is(.same-as, .setup-step) :is(.prov-kind label, .prov-check) {
+    min-height: 44px;
+  }
+  .icon-btn,
+  .p-close,
+  .settings-close {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  select,
+  .search input,
+  .same-as select,
+  .same-as input,
+  .gate-pw input,
+  .setup-step input,
+  .setup-step select {
+    font-size: 16px;
+  }
+}

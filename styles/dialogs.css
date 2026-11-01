@@ -1,0 +1,573 @@
+/* Asking that two names be one: the picker over the names of the same kind,
+   and the choice of which spelling is shown from then on. */
+.same-as {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lift);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0;
+  width: min(430px, calc(100vw - 32px));
+}
+.same-as::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+}
+.same-as form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 24px;
+}
+.same-as h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 20px;
+  margin: 0;
+}
+.same-as p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.same-as label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: -4px;
+}
+.same-as select,
+.same-as input {
+  min-height: 36px;
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.same-as select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--paper) var(--select-arrow) no-repeat right 12px center;
+  padding-right: 32px;
+  cursor: pointer;
+}
+.same-as select:focus,
+.same-as input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.same-as input[hidden] {
+  display: none;
+}
+.same-as-status {
+  min-height: 17px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.same-as-status.err {
+  color: var(--danger);
+}
+.same-as-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#same-as-cancel {
+  color: var(--ink-soft);
+  background: none;
+  border-color: var(--line);
+}
+#same-as-cancel:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+#same-as-submit {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+#same-as-submit:hover {
+  background: var(--accent-hover);
+}
+#same-as-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.same-as-row button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Settings borrows the Same-as dialog's look, with a wider form. */
+.settings {
+  width: min(500px, calc(100vw - 32px));
+}
+.settings h3 {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 4px 0 -4px;
+}
+.settings form + form {
+  border-top: 1px solid var(--line);
+}
+.settings form[hidden],
+.settings [role="tabpanel"][hidden],
+.settings .same-as-row[hidden] {
+  display: none;
+}
+/* Held near the top, not centred, so switching tabs never moves the tab row. */
+.settings {
+  margin-top: min(10vh, 80px);
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 24px 0;
+}
+.settings-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+}
+.settings-close:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 24px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settings-tabs button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.settings-tabs button:hover {
+  color: var(--ink);
+}
+.settings-tabs button[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+.pw-current[hidden] {
+  display: none;
+}
+/* OpenRouter or Custom: two radios drawn as one segmented control. The
+   fields only one of them asks for sit in a wrapper that lays out as if it
+   weren't there, so the form's own gap spaces them. */
+.prov-kind {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+:is(.same-as, .setup-step) .prov-kind label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+:is(.same-as, .setup-step) .prov-kind label:hover {
+  color: var(--ink);
+}
+:is(.same-as, .setup-step) .prov-kind label:has(input:checked) {
+  background: var(--line-soft);
+  color: var(--ink);
+}
+:is(.same-as, .setup-step) .prov-kind label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+:is(.same-as, .setup-step) .prov-kind input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+}
+.prov-fields {
+  display: contents;
+}
+.prov-fields[hidden] {
+  display: none;
+}
+:is(.same-as, .setup-step) .prov-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+:is(.same-as, .setup-step) .prov-check input {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+:is(.same-as, .setup-step) .prov-note {
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.prov-row {
+  display: flex;
+  gap: 8px;
+}
+.prov-row input {
+  flex: 1;
+  min-width: 0;
+}
+.prov-aside,
+#prov-clear,
+.prov-waiting button {
+  color: var(--ink-soft);
+  background: none;
+  border-color: var(--line);
+}
+.prov-aside:hover,
+#prov-clear:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+.prov-aside[hidden],
+#prov-clear[hidden],
+.prov-waiting[hidden] {
+  display: none;
+}
+.prov-aside:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+#prov-clear {
+  margin-right: auto;
+  color: var(--danger);
+}
+#prov-save,
+#pw-save,
+#lang-save,
+#passkey-add {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+#prov-save:hover,
+#pw-save:hover,
+#lang-save:hover,
+#passkey-add:hover {
+  background: var(--accent-hover);
+}
+#prov-save:disabled,
+#pw-save:disabled,
+#lang-save:disabled,
+#passkey-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.prov-waiting,
+.waiting-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--line-soft);
+  border-radius: 8px;
+  padding: 12px 12px;
+}
+.prov-waiting button,
+.waiting-notice button {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--paper);
+}
+.waiting-notice {
+  margin-bottom: 16px;
+}
+.settings-link {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.waiting-notice .settings-link {
+  text-decoration: none;
+}
+.thumb .working.wait {
+  color: var(--ink-soft);
+  background: var(--working-wait);
+  text-align: center;
+}
+.icon-btn {
+  width: 36px;
+  padding: 0;
+}
+
+/* Login gate — full-screen overlay shown until a session is established. */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--ground);
+  padding: 24px;
+}
+.gate.on {
+  display: flex;
+}
+.gate-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lift);
+  padding: 40px 36px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+}
+.gate-card .brand {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.gate-card h1 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 24px;
+  margin: 0;
+}
+.gate-card p {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 8px 0 24px;
+}
+.gate-btn {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s var(--ease);
+}
+.gate-btn:hover {
+  background: var(--accent-hover);
+}
+.gate-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.gate-pw {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gate-pw[hidden],
+.gate-btn[hidden] {
+  display: none;
+}
+.gate-pw input {
+  min-height: 44px;
+  font: inherit;
+  font-size: 15px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.gate-pw input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.gate-pw .gate-btn {
+  justify-content: center;
+}
+/* Beside a password form, the passkey is the second way in. */
+.gate-pw:not([hidden]) + .gate-btn {
+  margin-top: 12px;
+  color: var(--ink);
+  background: none;
+  border: 1px solid var(--line);
+}
+.gate-status {
+  margin-top: 16px;
+  font-size: 13px;
+  min-height: 18px;
+  color: var(--ink-soft);
+}
+.gate-status.err {
+  color: var(--danger);
+}
+/* Setup — the gate's first-run variant: one step at a time, in a wider card. */
+.setup-card {
+  max-width: 440px;
+  text-align: left;
+}
+.setup-card .brand,
+.setup-card > p {
+  text-align: center;
+}
+.setup-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.setup-step[hidden] {
+  display: none;
+}
+.setup-step h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0;
+}
+.setup-step p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.setup-step label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: -4px;
+}
+.setup-step input,
+.setup-step select {
+  min-height: 36px;
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.setup-step input:focus,
+.setup-step select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.setup-step code {
+  font-size: 12px;
+}
+.setup-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.setup-row .gate-btn {
+  min-height: 36px;
+  font-size: 13px;
+  padding: 0 12px;
+}
+.setup-back,
+.setup-skip {
+  color: var(--ink-soft);
+  background: none;
+  border-color: var(--line);
+}
+.setup-back {
+  margin-right: auto;
+}
+.setup-back:hover,
+.setup-skip:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+#setup .gate-status {
+  text-align: center;
+}
+
+.logout-btn {
+  font-weight: 400;
+  color: var(--ink-soft);
+  background: none;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+.logout-btn:hover {
+  background: var(--line-soft);
+  color: var(--ink);
+}
+.logout-btn[hidden] {
+  display: none;
+}
+/* The controls without a ring of their own above take the accent's, rather
+   than the browser's, so every ring is one the palette checks in both
+   schemes. */
+:is(
+  .logout-btn,
+  .gate-btn,
+  .setup-back,
+  .setup-skip,
+  .prov-aside,
+  #prov-clear,
+  .waiting-notice button,
+  .prov-waiting button,
+  .settings-link,
+  .settings-close
+):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.settings-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
