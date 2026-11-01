@@ -43,6 +43,9 @@
   :is(.same-as, .setup-step) :is(.prov-kind label, .prov-check) {
     min-height: 44px;
   }
+  .prov-model {
+    min-height: 44px;
+  }
   .icon-btn,
   .p-close,
   .settings-close {
