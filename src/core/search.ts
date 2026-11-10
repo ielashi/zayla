@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { rmSync, statSync } from "node:fs";
 import type { ApiSearchHit, SearchTier, Snippet } from "../shared.ts";
-import type { DocumentRecord, Library } from "./db.ts";
+import { type DocumentRecord, documentDate, type Library } from "./db.ts";
 import { searchIndexPath, transcriptionPath } from "./library.ts";
 import { readTranscriptionSync } from "./transcription.ts";
 
@@ -446,7 +446,11 @@ export function searchLibrary(lib: Library, query: string): ApiSearchHit[] {
   for (const row of rows) {
     const doc = lib.documents.get(row.hash);
     if (doc)
-      candidates.push({ ...row, doc_date: doc.docDate, added_at: doc.addedAt });
+      candidates.push({
+        ...row,
+        doc_date: documentDate(doc),
+        added_at: doc.addedAt,
+      });
   }
 
   const hits: { hash: string; tiers: SearchTier[]; row: Candidate }[] = [];

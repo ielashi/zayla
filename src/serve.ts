@@ -15,9 +15,12 @@ import { countUsers, requireAuth } from "./core/auth.ts";
 import type { Library } from "./core/db.ts";
 import {
   type DocumentRecord,
+  documentDate,
   findDocumentsByPrefix,
   getDocument,
   listDocuments,
+  type OwnerFields,
+  setOwnerDate,
 } from "./core/db.ts";
 import {
   clearProvider,
@@ -51,6 +54,7 @@ import { pageCounter, renderPage, renderThumbnail } from "./core/render.ts";
 import { searchLibrary } from "./core/search.ts";
 import { newSetupCode } from "./core/setup.ts";
 import { readTranscription } from "./core/transcription.ts";
+import { isCalendarDate } from "./dates.ts";
 import { readingLanguagesFrom } from "./languages.ts";
 import {
   DESTINATION_PATHS,
@@ -118,7 +122,9 @@ function toApi(
     // extracted (null / [] until enriched)
     title: shown?.title ?? null,
     people: d.people ?? [],
-    date: d.docDate,
+    date: documentDate(d),
+    readDate: d.docDate,
+    dateSetByOwner: d.owner !== null,
     languages: d.languages ?? [],
     keywords: d.keywords ?? [],
     summary: shown?.summary || null,
@@ -128,6 +134,20 @@ function toApi(
     readBy: d.enrichModel ?? d.enrichProvider,
     pages,
   };
+}
+
+/**
+ * What a PATCH body says the owner set: their fields, null to drop them, or
+ * undefined when the body says neither.
+ */
+function bodyOwner(
+  body: { owner?: { date?: unknown } | null } | null,
+): OwnerFields | null | undefined {
+  if (!body || !("owner" in body)) return undefined;
+  if (body.owner === null) return null;
+  const date = body.owner?.date;
+  if (date === null) return { date: null };
+  return isCalendarDate(date) ? { date } : undefined;
 }
 
 /** Shape one entity's detail into the wire contract its page consumes. */
@@ -688,6 +708,38 @@ export function startServer(port: number, lib: Library) {
       // prefix, so nothing is ever Deleted by a short hash that happened to
       // match.
       "/api/documents/:hash": {
+        // Set what the owner says about a Document, which no reading replaces:
+        // `{ owner: { date } }` gives it a date, or none with a null date, and
+        // `{ owner: null }` goes back to the date its Enrichment read. Like
+        // DELETE, it takes the full hash.
+        PATCH: async (req) => {
+          const user = requireAuth(lib, req);
+          if (!user) return unauthorized();
+          const body = (await req.json().catch(() => null)) as {
+            owner?: { date?: unknown } | null;
+          } | null;
+          const owner = bodyOwner(body);
+          if (owner === undefined)
+            return Response.json(
+              {
+                error:
+                  "expected { owner: { date } } with a yyyy-mm-dd date or null, or { owner: null }",
+              },
+              { status: 400 },
+            );
+          const hash = req.params.hash;
+          if (!setOwnerDate(lib, hash, owner))
+            return new Response("not found", { status: 404 });
+          const updated = getDocument(lib, hash);
+          if (!updated) return new Response("not found", { status: 404 });
+          return Response.json(
+            toApi(
+              updated,
+              readingLanguagesOf(lib, user.id),
+              await pagesOf(updated),
+            ),
+          );
+        },
         DELETE: async (req) => {
           const denied = guard(lib, req);
           if (denied) return denied;

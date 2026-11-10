@@ -33,7 +33,12 @@ export type ApiDocument = {
   status: DocumentStatus;
   title: string | null;
   people: string[];
+  /** The Document's date: the one its owner set, if any, else the one its reading found. */
   date: string | null;
+  /** The date its reading found, whatever its owner set. */
+  readDate: string | null;
+  /** Whether `date` is one its owner set (null included) rather than its reading's. */
+  dateSetByOwner: boolean;
   languages: string[];
   keywords: string[];
   summary: string | null;

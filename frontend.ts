@@ -3,6 +3,7 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import { listedEntities } from "./src/browse.ts";
+import { formatDate } from "./src/dates.ts";
 import { tabFor, wrapFocus } from "./src/focus.ts";
 import { type Html, type HtmlValue, html, join, setHtml } from "./src/html.ts";
 import { languageList } from "./src/language-list.ts";
@@ -127,12 +128,6 @@ const fmtSize = (b: number) => {
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
   return `${(b / (1024 * 1024)).toFixed(1)} MB`;
 };
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 const kind = (d: ApiDocument) =>
   (d.ext || (d.mime.split("/")[1] ?? "")).toUpperCase() || "FILE";
 function unreachable() {
@@ -657,7 +652,7 @@ function documentCard(d: ApiDocument): HTMLButtonElement {
         <div class="name">${titleOf(d)}</div>
         ${passage || (d.summary && html`<div class="snippet">${d.summary}</div>`)}
         ${who && html`<div class="who">${who}</div>`}
-        <div class="meta"><span class="dt">${d.date ? fmtDate(d.date) : html`<span class="undated">undated</span>`}</span></div>
+        <div class="meta"><span class="dt">${d.date ? formatDate(d.date) : html`<span class="undated">undated</span>`}</span></div>
       </div>`,
   );
   card.onclick = errored ? () => enrichDoc(d.hash) : () => openDoc(d);
@@ -1158,12 +1153,12 @@ function drawPanel(d: ApiDocument) {
   if (from) kv.push(["From", from]);
   if (to) kv.push(["To", to]);
   if (d.people?.length) kv.push(["People", join(d.people, html`<br>`)]);
-  if (d.date) kv.push(["Date", fmtDate(d.date)]);
+  kv.push(["Date", html`<div class="date-row">${dateView(d)}</div>`]);
   if (d.deadlines?.length)
     kv.push([
       "Deadlines",
       join(
-        d.deadlines.map((x) => `${x.label} — ${fmtDate(x.date)}`),
+        d.deadlines.map((x) => `${x.label} — ${formatDate(x.date)}`),
         html`<br>`,
       ),
     ]);
@@ -1186,7 +1181,7 @@ function drawPanel(d: ApiDocument) {
       <dl class="kv">
         <dt>Format</dt><dd>${d.mime}</dd>
         <dt>Size</dt><dd class="mono">${fmtSize(d.bytes)}</dd>
-        <dt>Added</dt><dd>${fmtDate(d.addedAt)}</dd>
+        <dt>Added</dt><dd>${formatDate(d.addedAt)}</dd>
         <dt>Status</dt><dd>${d.status === "enriched" ? "Processed" : "Waiting to be processed"}</dd>
       </dl>
       <div class="p-file">${d.filename} · ${d.hash.slice(0, 16)}…</div>
@@ -1195,7 +1190,85 @@ function drawPanel(d: ApiDocument) {
   );
   const closeBtn = panel.querySelector<HTMLButtonElement>(".p-close");
   if (closeBtn) closeBtn.onclick = closeDoc;
+  wireDateView(d);
   renderActions(d);
+}
+
+/**
+ * The Date row as it reads: the Document's date, whether its owner set it, and
+ * the way to change it.
+ */
+function dateView(d: ApiDocument): Html {
+  return html`
+    <span>${d.date ? formatDate(d.date) : html`<span class="undated">No date</span>`}</span>
+    ${d.dateSetByOwner && html`<span class="date-note">set by you</span>`}
+    <button type="button" class="date-edit quiet">Edit</button>`;
+}
+function wireDateView(d: ApiDocument) {
+  const row = el("panel").querySelector<HTMLElement>(".date-row");
+  const edit = row?.querySelector<HTMLButtonElement>(".date-edit");
+  if (row && edit) edit.onclick = () => renderDateEdit(row, d);
+}
+
+/**
+ * The Date row being changed: a day picked, no date at all, or, once the
+ * owner has set one, back to the date the reading found.
+ */
+function renderDateEdit(row: HTMLElement, d: ApiDocument) {
+  const read = d.readDate ? formatDate(d.readDate) : "none";
+  setHtml(
+    row,
+    html`
+    <input type="date" class="date-input" aria-label="Date" value="${d.date ?? ""}">
+    <div class="date-actions">
+      <button type="button" class="date-save">Save</button>
+      <button type="button" class="date-none quiet">No date</button>
+      ${d.dateSetByOwner && html`<button type="button" class="date-model quiet">Use the model's date (${read})</button>`}
+      <button type="button" class="date-cancel quiet">Cancel</button>
+    </div>`,
+  );
+  const input = row.querySelector<HTMLInputElement>(".date-input");
+  const on = (cls: string, act: () => void) => {
+    const b = row.querySelector<HTMLButtonElement>(cls);
+    if (b) b.onclick = act;
+  };
+  on(".date-save", () => {
+    if (input?.value) saveOwner(d.hash, { date: input.value });
+  });
+  on(".date-none", () => saveOwner(d.hash, { date: null }));
+  on(".date-model", () => saveOwner(d.hash, null));
+  on(".date-cancel", () => {
+    setHtml(row, dateView(d));
+    wireDateView(d);
+    row.querySelector<HTMLElement>(".date-edit")?.focus();
+  });
+  input?.focus();
+}
+
+/** Record what the owner says about a Document, then show it everywhere it's shown. */
+async function saveOwner(hash: string, owner: { date: string | null } | null) {
+  try {
+    const res = await fetch(`/api/documents/${hash}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ owner }),
+    });
+    if (res.status === 404) {
+      await forgetDoc(hash);
+      return;
+    }
+    const body = (await res.json().catch(() => ({}))) as ApiDocument & {
+      error?: string;
+    };
+    if (!res.ok || body.error)
+      throw new Error(body.error || `HTTP ${res.status}`);
+    upsertDoc(body);
+    render();
+    redrawPanel(hash);
+    el("panel").querySelector<HTMLElement>(".date-edit")?.focus();
+  } catch (err) {
+    toast(`Couldn't change the date: ${(err as Error).message}`, true);
+  }
 }
 /**
  * A Document's pages for the viewer, as images the server rendered: the same
@@ -1302,7 +1375,7 @@ function renderProcessAsk(d: ApiDocument) {
   setHtml(
     bar,
     html`
-    <p class="p-ask">Process again with <strong>${state.provider?.model}</strong>? This replaces the ${d.readBy ? html`result from <strong>${d.readBy}</strong>` : "current result"} and can't be undone.</p>
+    <p class="p-ask">Process again with <strong>${state.provider?.model}</strong>? This replaces the ${d.readBy ? html`result from <strong>${d.readBy}</strong>` : "current result"} and can't be undone.${d.dateSetByOwner && html` The date you set (${d.date ? formatDate(d.date) : "no date"}) will be kept.`}</p>
     <div class="p-actions">
       <button class="proc-btn confirm" type="button">${PROCESS_ICON}Process again</button>
       <button class="proc-btn" type="button">Cancel</button>

@@ -5,10 +5,12 @@ import { parse } from "yaml";
 import {
   type CatalogFields,
   closeLibrary,
+  documentDate,
   getDocument,
   insertDocument,
   listDocuments,
   openLibrary,
+  setOwnerDate,
 } from "./db.ts";
 import type { EnrichedMetadata, EnrichmentProvider } from "./enrich.ts";
 import { enrichDocument } from "./enrich.ts";
@@ -258,6 +260,97 @@ test("an Enrichment that named a provider rather than an address keeps it, with 
       enrichProvider: "mlx",
       enrichBaseUrl: "http://mock.test/v1",
     });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("a date the owner set wins over the one the Enrichment read, and survives reopening the Library", async () => {
+  const first = openLibrary(TMP);
+  insertDocument(first, catalog());
+  const doc = getDocument(first, HASH);
+  if (!doc) throw new Error("expected the Document to be filed");
+  await enrichDocument(first, doc, provider("Mietvertrag"), ["EN"]);
+  setOwnerDate(first, HASH, { date: "2026-03-04" });
+  closeLibrary(first);
+
+  const lib = openLibrary(TMP);
+  try {
+    const after = getDocument(lib, HASH);
+    expect(after && documentDate(after)).toBe("2026-03-04");
+    expect(after?.docDate).toBe("2026-02-15");
+    expect(parse(await Bun.file(DOCUMENT_FILE).text())).toMatchObject({
+      date: "2026-02-15",
+      owner: { date: "2026-03-04" },
+    });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("a Document its owner said has no date stays undated after reopening, though its Enrichment read one", async () => {
+  const first = openLibrary(TMP);
+  insertDocument(first, catalog());
+  const doc = getDocument(first, HASH);
+  if (!doc) throw new Error("expected the Document to be filed");
+  await enrichDocument(first, doc, provider("Mietvertrag"), ["EN"]);
+  setOwnerDate(first, HASH, { date: null });
+  closeLibrary(first);
+
+  const lib = openLibrary(TMP);
+  try {
+    const after = getDocument(lib, HASH);
+    expect(after && documentDate(after)).toBeNull();
+    expect(parse(await Bun.file(DOCUMENT_FILE).text()).owner).toEqual({
+      date: null,
+    });
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("reading a Document again keeps the date its owner set, and going back to the reading's date drops it", async () => {
+  const lib = openLibrary(TMP);
+  try {
+    insertDocument(lib, catalog());
+    const doc = getDocument(lib, HASH);
+    if (!doc) throw new Error("expected the Document to be filed");
+    setOwnerDate(lib, HASH, { date: "2026-03-04" });
+    await enrichDocument(lib, doc, provider("Mietvertrag"), ["EN"]);
+    const reread = getDocument(lib, HASH);
+    expect(reread && documentDate(reread)).toBe("2026-03-04");
+
+    setOwnerDate(lib, HASH, null);
+    const back = getDocument(lib, HASH);
+    expect(back && documentDate(back)).toBe("2026-02-15");
+    expect(parse(await Bun.file(DOCUMENT_FILE).text())).not.toHaveProperty(
+      "owner",
+    );
+  } finally {
+    closeLibrary(lib);
+  }
+});
+
+test("search ranks a Document by the date its owner set, not the one its Enrichment read", async () => {
+  const lib = openLibrary(TMP);
+  try {
+    const older = "b".repeat(64);
+    const newer = "c".repeat(64);
+    insertDocument(lib, catalog(older));
+    insertDocument(lib, {
+      ...catalog(newer),
+      addedAt: "2026-01-03T00:00:00.000Z",
+    });
+    for (const hash of [older, newer]) {
+      const doc = getDocument(lib, hash);
+      if (!doc) throw new Error("expected the Document to be filed");
+      await enrichDocument(lib, doc, provider("Mietvertrag"), ["EN"]);
+    }
+    setOwnerDate(lib, older, { date: "2026-12-01" });
+    expect(searchLibrary(lib, "nordhaus").map((h) => h.hash)).toEqual([
+      older,
+      newer,
+    ]);
   } finally {
     closeLibrary(lib);
   }
