@@ -19,8 +19,7 @@ import {
   findDocumentsByPrefix,
   getDocument,
   listDocuments,
-  type OwnerFields,
-  setOwnerDate,
+  setOwner,
 } from "./core/db.ts";
 import {
   clearProvider,
@@ -67,6 +66,7 @@ import type {
   ApiEntity,
   ApiEntityPage,
   ApiProvider,
+  OwnerFields,
 } from "./shared.ts";
 
 /** The answer to a request carrying no valid session, wherever the gate is. */
@@ -140,12 +140,13 @@ function toApi(
  * What a PATCH body says the owner set: their fields, null to drop them, or
  * undefined when the body says neither.
  */
-function bodyOwner(
-  body: { owner?: { date?: unknown } | null } | null,
-): OwnerFields | null | undefined {
-  if (!body || !("owner" in body)) return undefined;
-  if (body.owner === null) return null;
-  const date = body.owner?.date;
+function bodyOwner(body: unknown): OwnerFields | null | undefined {
+  if (typeof body !== "object" || body === null || !("owner" in body))
+    return undefined;
+  const { owner } = body;
+  if (owner === null) return null;
+  if (typeof owner !== "object" || !("date" in owner)) return undefined;
+  const { date } = owner;
   if (date === null) return { date: null };
   return isCalendarDate(date) ? { date } : undefined;
 }
@@ -715,10 +716,7 @@ export function startServer(port: number, lib: Library) {
         PATCH: async (req) => {
           const user = requireAuth(lib, req);
           if (!user) return unauthorized();
-          const body = (await req.json().catch(() => null)) as {
-            owner?: { date?: unknown } | null;
-          } | null;
-          const owner = bodyOwner(body);
+          const owner = bodyOwner(await req.json().catch(() => null));
           if (owner === undefined)
             return Response.json(
               {
@@ -728,7 +726,7 @@ export function startServer(port: number, lib: Library) {
               { status: 400 },
             );
           const hash = req.params.hash;
-          if (!setOwnerDate(lib, hash, owner))
+          if (!setOwner(lib, hash, owner))
             return new Response("not found", { status: 404 });
           const updated = getDocument(lib, hash);
           if (!updated) return new Response("not found", { status: 404 });

@@ -12,6 +12,12 @@
 /** "needs_ocr" is legacy: pre-vision rows flagged for a pass that listPending now picks up. */
 export type DocumentStatus = "imported" | "enriched" | "needs_ocr";
 
+/**
+ * The fields of a Document its owner set by hand. A `date` of null is a
+ * Document its owner said has no date, not one they left alone.
+ */
+export type OwnerFields = { date: string | null };
+
 /** A party to the document. organization is primary; person is "" when not named. */
 export type Party = { organization: string; person: string };
 

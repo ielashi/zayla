@@ -10,7 +10,7 @@ import {
   insertDocument,
   listDocuments,
   openLibrary,
-  setOwnerDate,
+  setOwner,
 } from "./db.ts";
 import type { EnrichedMetadata, EnrichmentProvider } from "./enrich.ts";
 import { enrichDocument } from "./enrich.ts";
@@ -271,7 +271,7 @@ test("a date the owner set wins over the one the Enrichment read, and survives r
   const doc = getDocument(first, HASH);
   if (!doc) throw new Error("expected the Document to be filed");
   await enrichDocument(first, doc, provider("Mietvertrag"), ["EN"]);
-  setOwnerDate(first, HASH, { date: "2026-03-04" });
+  setOwner(first, HASH, { date: "2026-03-04" });
   closeLibrary(first);
 
   const lib = openLibrary(TMP);
@@ -294,7 +294,7 @@ test("a Document its owner said has no date stays undated after reopening, thoug
   const doc = getDocument(first, HASH);
   if (!doc) throw new Error("expected the Document to be filed");
   await enrichDocument(first, doc, provider("Mietvertrag"), ["EN"]);
-  setOwnerDate(first, HASH, { date: null });
+  setOwner(first, HASH, { date: null });
   closeLibrary(first);
 
   const lib = openLibrary(TMP);
@@ -315,12 +315,12 @@ test("reading a Document again keeps the date its owner set, and going back to t
     insertDocument(lib, catalog());
     const doc = getDocument(lib, HASH);
     if (!doc) throw new Error("expected the Document to be filed");
-    setOwnerDate(lib, HASH, { date: "2026-03-04" });
+    setOwner(lib, HASH, { date: "2026-03-04" });
     await enrichDocument(lib, doc, provider("Mietvertrag"), ["EN"]);
     const reread = getDocument(lib, HASH);
     expect(reread && documentDate(reread)).toBe("2026-03-04");
 
-    setOwnerDate(lib, HASH, null);
+    setOwner(lib, HASH, null);
     const back = getDocument(lib, HASH);
     expect(back && documentDate(back)).toBe("2026-02-15");
     expect(parse(await Bun.file(DOCUMENT_FILE).text())).not.toHaveProperty(
@@ -346,7 +346,7 @@ test("search ranks a Document by the date its owner set, not the one its Enrichm
       if (!doc) throw new Error("expected the Document to be filed");
       await enrichDocument(lib, doc, provider("Mietvertrag"), ["EN"]);
     }
-    setOwnerDate(lib, older, { date: "2026-12-01" });
+    setOwner(lib, older, { date: "2026-12-01" });
     expect(searchLibrary(lib, "nordhaus").map((h) => h.hash)).toEqual([
       older,
       newer,

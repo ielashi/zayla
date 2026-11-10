@@ -1,4 +1,4 @@
-import type { DocumentStatus } from "../shared.ts";
+import type { DocumentStatus, OwnerFields } from "../shared.ts";
 import {
   documentFileExists,
   readDocumentFiles,
@@ -79,12 +79,6 @@ export type DocumentRecord = {
   /** What its owner set by hand, which no reading replaces; null when nothing was. */
   owner: OwnerFields | null;
 };
-
-/**
- * The fields of a Document its owner set by hand. A `date` of null is a
- * Document its owner said has no date, not one they left alone.
- */
-export type OwnerFields = { date: string | null };
 
 /** A Document's date: the one its owner set, if any, else the one its Enrichment read. */
 export function documentDate(doc: DocumentRecord): string | null {
@@ -322,7 +316,7 @@ export function updateEnrichment(
  * Enrichment read. A reading made later keeps it. Returns false when the
  * Document isn't filed.
  */
-export function setOwnerDate(
+export function setOwner(
   lib: Library,
   hash: string,
   owner: OwnerFields | null,

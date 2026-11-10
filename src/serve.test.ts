@@ -3597,6 +3597,8 @@ test.each([
   ["a month alone", { owner: { date: "2026-03" } }],
   ["words", { owner: { date: "last Tuesday" } }],
   ["no owner field", { date: "2026-03-04" }],
+  ["an owner with no date", { owner: {} }],
+  ["a body that isn't an object", "2026-03-04"],
 ])(
   "PATCH /api/documents/:hash refuses %s, changing nothing",
   async (_, body) => {

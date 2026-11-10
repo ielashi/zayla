@@ -34,6 +34,7 @@ import type {
   ApiUnmergeOutcome,
   AppearanceRole,
   EntityKind,
+  OwnerFields,
   Party,
   ProviderKind,
 } from "./src/shared.ts";
@@ -1212,41 +1213,54 @@ function wireDateView(d: ApiDocument) {
 
 /**
  * The Date row being changed: a day picked, no date at all, or, once the
- * owner has set one, back to the date the reading found.
+ * owner has set one, back to the date the reading found. Enter saves the day
+ * picked; Escape puts the row back as it was, leaving the Document open.
  */
-function renderDateEdit(row: HTMLElement, d: ApiDocument) {
-  const read = d.readDate ? formatDate(d.readDate) : "none";
+function renderDateEdit(row: HTMLElement, d: ApiDocument, value = d.date) {
+  const readDay = d.readDate ? formatDate(d.readDate) : "none";
   setHtml(
     row,
     html`
-    <input type="date" class="date-input" aria-label="Date" value="${d.date ?? ""}">
-    <div class="date-actions">
-      <button type="button" class="date-save">Save</button>
-      <button type="button" class="date-none quiet">No date</button>
-      ${d.dateSetByOwner && html`<button type="button" class="date-model quiet">Use the model's date (${read})</button>`}
-      <button type="button" class="date-cancel quiet">Cancel</button>
-    </div>`,
+    <form class="date-form">
+      <input type="date" class="date-input" aria-label="Date" required value="${value ?? ""}">
+      <div class="date-actions">
+        <button type="submit" class="date-save">Save</button>
+        <button type="button" class="date-none quiet">No date</button>
+        ${d.dateSetByOwner && html`<button type="button" class="date-model quiet">Use the model's date (${readDay})</button>`}
+        <button type="button" class="date-cancel quiet">Cancel</button>
+      </div>
+    </form>`,
   );
+  const form = row.querySelector<HTMLFormElement>(".date-form");
   const input = row.querySelector<HTMLInputElement>(".date-input");
   const on = (cls: string, act: () => void) => {
     const b = row.querySelector<HTMLButtonElement>(cls);
     if (b) b.onclick = act;
   };
-  on(".date-save", () => {
-    if (input?.value) saveOwner(d.hash, { date: input.value });
-  });
-  on(".date-none", () => saveOwner(d.hash, { date: null }));
-  on(".date-model", () => saveOwner(d.hash, null));
-  on(".date-cancel", () => {
+  const cancel = () => {
     setHtml(row, dateView(d));
     wireDateView(d);
     row.querySelector<HTMLElement>(".date-edit")?.focus();
-  });
+  };
+  if (form)
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      if (input?.value) saveOwner(d.hash, { date: input.value });
+    };
+  if (input)
+    input.onkeydown = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      cancel();
+    };
+  on(".date-none", () => saveOwner(d.hash, { date: null }));
+  on(".date-model", () => saveOwner(d.hash, null));
+  on(".date-cancel", cancel);
   input?.focus();
 }
 
 /** Record what the owner says about a Document, then show it everywhere it's shown. */
-async function saveOwner(hash: string, owner: { date: string | null } | null) {
+async function saveOwner(hash: string, owner: OwnerFields | null) {
   try {
     const res = await fetch(`/api/documents/${hash}`, {
       method: "PATCH",
@@ -1263,8 +1277,11 @@ async function saveOwner(hash: string, owner: { date: string | null } | null) {
     if (!res.ok || body.error)
       throw new Error(body.error || `HTTP ${res.status}`);
     upsertDoc(body);
+    // Search ranks by the Document's date, so what it found may be in a new order.
+    refreshSearch();
     render();
-    redrawPanel(hash);
+    if (!openDocument(hash)) return;
+    drawPanel(body);
     el("panel").querySelector<HTMLElement>(".date-edit")?.focus();
   } catch (err) {
     toast(`Couldn't change the date: ${(err as Error).message}`, true);
@@ -1322,7 +1339,12 @@ function redrawPanel(hash: string) {
   const active = document.activeElement;
   const focusHere = active === document.body || el("panel").contains(active);
   const askingDelete = el("p-bar").querySelector(".del-btn.confirm") !== null;
+  // A date being changed stays open, with what was typed so far.
+  const editing = el("panel").querySelector<HTMLInputElement>(".date-input");
   drawPanel(d);
+  const row = el("panel").querySelector<HTMLElement>(".date-row");
+  if (editing && row) renderDateEdit(row, d, editing.value || null);
+  if (editing) return;
   if (askingDelete) renderDeleteAsk(d);
   else if (focusHere)
     el("p-bar").querySelector<HTMLElement>(".proc-btn")?.focus();
