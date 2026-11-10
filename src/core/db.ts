@@ -1,4 +1,4 @@
-import type { DocumentStatus } from "../shared.ts";
+import type { DocumentStatus, OwnerFields } from "../shared.ts";
 import {
   documentFileExists,
   readDocumentFiles,
@@ -75,7 +75,15 @@ export type DocumentRecord = {
 
   /** Where the Document's Transcription came from; null when it has none. */
   transcriptionProvenance: TranscriptionRecord | null;
+
+  /** What its owner set by hand, which no reading replaces; null when nothing was. */
+  owner: OwnerFields | null;
 };
+
+/** A Document's date: the one its owner set, if any, else the one its Enrichment read. */
+export function documentDate(doc: DocumentRecord): string | null {
+  return doc.owner ? doc.owner.date : doc.docDate;
+}
 
 /** A login challenge in flight, held in memory for the few minutes it lives. */
 export type PendingChallenge = { challenge: string; createdAt: number };
@@ -191,6 +199,7 @@ export function insertDocument(lib: Library, rec: CatalogFields): boolean {
     receiver: null,
     deadlines: null,
     transcriptionProvenance: null,
+    owner: null,
   };
   writeDocumentFile(lib.root, record);
   lib.documents.set(rec.hash, record);
@@ -299,5 +308,23 @@ export function updateEnrichment(
   lib.documents.set(hash, record);
   indexDocument(lib, hash);
   recordAppearances(lib, record);
+  return true;
+}
+
+/**
+ * Set what a Document's owner says about it, or with null go back to what its
+ * Enrichment read. A reading made later keeps it. Returns false when the
+ * Document isn't filed.
+ */
+export function setOwner(
+  lib: Library,
+  hash: string,
+  owner: OwnerFields | null,
+): boolean {
+  const doc = lib.documents.get(hash);
+  if (!doc || !documentFileExists(lib.root, hash)) return false;
+  const record: DocumentRecord = { ...doc, owner };
+  writeDocumentFile(lib.root, record);
+  lib.documents.set(hash, record);
   return true;
 }

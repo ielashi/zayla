@@ -12,6 +12,12 @@
 /** "needs_ocr" is legacy: pre-vision rows flagged for a pass that listPending now picks up. */
 export type DocumentStatus = "imported" | "enriched" | "needs_ocr";
 
+/**
+ * The fields of a Document its owner set by hand. A `date` of null is a
+ * Document its owner said has no date, not one they left alone.
+ */
+export type OwnerFields = { date: string | null };
+
 /** A party to the document. organization is primary; person is "" when not named. */
 export type Party = { organization: string; person: string };
 
@@ -33,7 +39,12 @@ export type ApiDocument = {
   status: DocumentStatus;
   title: string | null;
   people: string[];
+  /** The Document's date: the one its owner set, if any, else the one its reading found. */
   date: string | null;
+  /** The date its reading found, whatever its owner set. */
+  readDate: string | null;
+  /** Whether `date` is one its owner set (null included) rather than its reading's. */
+  dateSetByOwner: boolean;
   languages: string[];
   keywords: string[];
   summary: string | null;

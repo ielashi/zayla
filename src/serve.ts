@@ -15,9 +15,11 @@ import { countUsers, requireAuth } from "./core/auth.ts";
 import type { Library } from "./core/db.ts";
 import {
   type DocumentRecord,
+  documentDate,
   findDocumentsByPrefix,
   getDocument,
   listDocuments,
+  setOwner,
 } from "./core/db.ts";
 import {
   clearProvider,
@@ -51,6 +53,7 @@ import { pageCounter, renderPage, renderThumbnail } from "./core/render.ts";
 import { searchLibrary } from "./core/search.ts";
 import { newSetupCode } from "./core/setup.ts";
 import { readTranscription } from "./core/transcription.ts";
+import { isCalendarDate } from "./dates.ts";
 import { readingLanguagesFrom } from "./languages.ts";
 import {
   DESTINATION_PATHS,
@@ -63,6 +66,7 @@ import type {
   ApiEntity,
   ApiEntityPage,
   ApiProvider,
+  OwnerFields,
 } from "./shared.ts";
 
 /** The answer to a request carrying no valid session, wherever the gate is. */
@@ -118,7 +122,9 @@ function toApi(
     // extracted (null / [] until enriched)
     title: shown?.title ?? null,
     people: d.people ?? [],
-    date: d.docDate,
+    date: documentDate(d),
+    readDate: d.docDate,
+    dateSetByOwner: d.owner !== null,
     languages: d.languages ?? [],
     keywords: d.keywords ?? [],
     summary: shown?.summary || null,
@@ -128,6 +134,21 @@ function toApi(
     readBy: d.enrichModel ?? d.enrichProvider,
     pages,
   };
+}
+
+/**
+ * What a PATCH body says the owner set: their fields, null to drop them, or
+ * undefined when the body says neither.
+ */
+function bodyOwner(body: unknown): OwnerFields | null | undefined {
+  if (typeof body !== "object" || body === null || !("owner" in body))
+    return undefined;
+  const { owner } = body;
+  if (owner === null) return null;
+  if (typeof owner !== "object" || !("date" in owner)) return undefined;
+  const { date } = owner;
+  if (date === null) return { date: null };
+  return isCalendarDate(date) ? { date } : undefined;
 }
 
 /** Shape one entity's detail into the wire contract its page consumes. */
@@ -688,6 +709,35 @@ export function startServer(port: number, lib: Library) {
       // prefix, so nothing is ever Deleted by a short hash that happened to
       // match.
       "/api/documents/:hash": {
+        // Set what the owner says about a Document, which no reading replaces:
+        // `{ owner: { date } }` gives it a date, or none with a null date, and
+        // `{ owner: null }` goes back to the date its Enrichment read. Like
+        // DELETE, it takes the full hash.
+        PATCH: async (req) => {
+          const user = requireAuth(lib, req);
+          if (!user) return unauthorized();
+          const owner = bodyOwner(await req.json().catch(() => null));
+          if (owner === undefined)
+            return Response.json(
+              {
+                error:
+                  "expected { owner: { date } } with a yyyy-mm-dd date or null, or { owner: null }",
+              },
+              { status: 400 },
+            );
+          const hash = req.params.hash;
+          if (!setOwner(lib, hash, owner))
+            return new Response("not found", { status: 404 });
+          const updated = getDocument(lib, hash);
+          if (!updated) return new Response("not found", { status: 404 });
+          return Response.json(
+            toApi(
+              updated,
+              readingLanguagesOf(lib, user.id),
+              await pagesOf(updated),
+            ),
+          );
+        },
         DELETE: async (req) => {
           const denied = guard(lib, req);
           if (denied) return denied;
@@ -862,8 +912,13 @@ export function startServer(port: number, lib: Library) {
     },
 
     // Bundled on request with hot reloading while developing; built once,
-    // minified, when the image runs with NODE_ENV=production.
-    development: process.env.NODE_ENV !== "production" && { hmr: true },
+    // minified, when the image runs with NODE_ENV=production. Under `bun test`
+    // (NODE_ENV=test) there is no one to reload for, and each hot-reloading
+    // server keeps its file watchers after it stops: enough of them exhaust
+    // Linux's inotify limit partway through the suite.
+    development: process.env.NODE_ENV !== "production" && {
+      hmr: process.env.NODE_ENV !== "test",
+    },
     // Enrichment holds a request open while the model works — a cloud vision
     // call, or a local server loading a multi-GB model on first use — with no
     // bytes flowing to the client meanwhile. Bun's 10s default kills that; use the max (255s).
