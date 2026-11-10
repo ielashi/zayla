@@ -912,8 +912,13 @@ export function startServer(port: number, lib: Library) {
     },
 
     // Bundled on request with hot reloading while developing; built once,
-    // minified, when the image runs with NODE_ENV=production.
-    development: process.env.NODE_ENV !== "production" && { hmr: true },
+    // minified, when the image runs with NODE_ENV=production. Under `bun test`
+    // (NODE_ENV=test) there is no one to reload for, and each hot-reloading
+    // server keeps its file watchers after it stops: enough of them exhaust
+    // Linux's inotify limit partway through the suite.
+    development: process.env.NODE_ENV !== "production" && {
+      hmr: process.env.NODE_ENV !== "test",
+    },
     // Enrichment holds a request open while the model works — a cloud vision
     // call, or a local server loading a multi-GB model on first use — with no
     // bytes flowing to the client meanwhile. Bun's 10s default kills that; use the max (255s).
