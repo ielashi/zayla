@@ -183,6 +183,15 @@ Re-Enriching "processing again"; those are its words for people, not other
 concepts.
 _Avoid_: Refresh, redo, retry, reprocess
 
+**Connection**:
+One user's permission for one agent to read the Library on their behalf. The
+agent reads as that user — their Me, their Reading languages — sees what they
+see, and can change nothing. What it reads goes to the agent's own model,
+wherever that runs, which is outside anything Zayla controls. A Connection lasts
+until its user removes it, and removing it cuts the agent off at once.
+The interface says "connected apps".
+_Avoid_: Integration, client, token, app
+
 **Delete**:
 Permanently removing a Document — its place in the Library, its Original, its
 Derived artifacts, its Enrichment and its Appearances, all at once. Zayla
