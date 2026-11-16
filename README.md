@@ -101,6 +101,26 @@ and Zayla knowing the address your browser opens:
 domain or subdomain, not under `/zayla`. Once it's set, add a passkey under
 Settings.
 
+### Connecting an agent
+
+An AI agent such as Claude can search your documents once you approve it. It
+needs `ZAYLA_URL` set, and connects at that address followed by `/mcp`, for
+example `https://zayla.example.com/mcp`; Settings shows it under **Connected
+apps**, with a button to copy it. Add it to the agent as a connector, or for
+Claude Code:
+
+```sh
+claude mcp add --transport http zayla https://zayla.example.com/mcp
+```
+
+The agent sends you to Zayla to sign in and approve it. Connected apps in
+Settings lists every agent you approved, with when it was last used, and
+removing one cuts it off at once.
+
+claude.ai and the Claude apps connect from Anthropic's cloud, not from your
+device, so Zayla must be reachable from the internet over HTTPS for them.
+Agents on the same network as Zayla, such as Claude Code, need neither.
+
 ## License
 
 Zayla is licensed under the [GNU Affero General Public License v3.0](LICENSE).

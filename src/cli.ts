@@ -404,7 +404,7 @@ async function main(): Promise<void> {
 
     case "auth-reset": {
       const answer = prompt(
-        "Remove ALL users, passkeys, sessions, Providers and who each had marked as me? " +
+        "Remove ALL users, passkeys, sessions, Providers, connected apps and who each had marked as me? " +
           "Documents are untouched. Type 'yes' to confirm:",
       );
       if (answer !== "yes") {
@@ -413,8 +413,8 @@ async function main(): Promise<void> {
       }
       const lib = openToWrite("auth-reset");
       try {
-        // Each user's Me, Provider and key are in their own file, so they go
-        // with the user: the next owner of the Library makes their own.
+        // Each user's Me, Provider, key and Connections are in their own file,
+        // so they go with the user: the next owner of the Library makes their own.
         clearAllAuth(lib);
         console.log(
           "auth reset — restart the server for a Setup code to create a new owner.",

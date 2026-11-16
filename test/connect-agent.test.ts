@@ -628,3 +628,167 @@ test("a Connection's last use is recorded when it refreshes, and not on each cal
     Date.parse(connected ?? ""),
   );
 });
+
+/** The signed-in user's connected apps, as Settings asks for them. */
+async function connectedApps(zayla: RunningZayla, session: string) {
+  const res = await fetch(`${zayla.url}/api/connections`, {
+    headers: { Cookie: session },
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as {
+    address: string | null;
+    connections: {
+      id: string;
+      name: string;
+      redirectDomain: string;
+      grantedAt: string;
+      lastUsedAt: string | null;
+    }[];
+  };
+}
+
+test("the web API lists the signed-in user's Connections and the address to give an agent", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  await connectAgentTokens(zayla, clientId);
+  const session = await signIn(zayla, PASSWORD);
+
+  const listed = await connectedApps(zayla, session);
+  expect(listed.address).toBe(`${ZAYLA_URL}/mcp`);
+  expect(listed.connections).toHaveLength(1);
+  const [connection] = listed.connections;
+  expect(connection?.name).toBe("Example Agent");
+  expect(connection?.redirectDomain).toBe("agent.example.org");
+  expect(Date.parse(connection?.grantedAt ?? "")).not.toBeNaN();
+  expect(Date.parse(connection?.lastUsedAt ?? "")).not.toBeNaN();
+  expect(Object.keys(connection ?? {}).sort()).toEqual([
+    "grantedAt",
+    "id",
+    "lastUsedAt",
+    "name",
+    "redirectDomain",
+  ]);
+
+  const signedOut = await fetch(`${zayla.url}/api/connections`);
+  expect(signedOut.status).toBe(401);
+});
+
+test("without ZAYLA_URL, the web API has no address for agents and no Connections", async () => {
+  library = await newLibrary();
+  await writeUser(library, { username: "owner", password: PASSWORD });
+  zayla = await startZayla(library);
+
+  expect(await connectedApps(zayla, await signIn(zayla, PASSWORD))).toEqual({
+    address: null,
+    connections: [],
+  });
+});
+
+/** Remove one of the signed-in user's Connections, as Settings does. */
+function removeConnection(zayla: RunningZayla, session: string, id: string) {
+  return fetch(`${zayla.url}/api/connections/${id}`, {
+    method: "DELETE",
+    headers: { Cookie: session },
+  });
+}
+
+/** Whether `token` still gets an answer from /mcp rather than a 401. */
+async function mcpAnswers(zayla: RunningZayla, token: string) {
+  const res = await fetch(`${zayla.url}/mcp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "probe", version: "0" },
+      },
+    }),
+  });
+  await res.body?.cancel();
+  return res.status !== 401;
+}
+
+test("removing a Connection cuts its agent off at once, and it can be approved again", async () => {
+  const { zayla, userId, clientId } = await startWithAgent();
+  const tokens = await connectAgentTokens(zayla, clientId);
+  expect(await mcpAnswers(zayla, tokens.access_token)).toBe(true);
+  const session = await signIn(zayla, PASSWORD);
+  const [connection] = (await connectedApps(zayla, session)).connections;
+
+  const removed = await removeConnection(zayla, session, connection?.id ?? "");
+  expect(removed.status).toBe(204);
+
+  expect(await mcpAnswers(zayla, tokens.access_token)).toBe(false);
+  const refused = await refresh(zayla, clientId, tokens.refresh_token);
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({ error: "invalid_grant" });
+  expect((await connectedApps(zayla, session)).connections).toEqual([]);
+  expect(await connectionsInFile(userId)).toEqual([]);
+
+  const again = await connectAgentTokens(zayla, clientId);
+  expect(await mcpAnswers(zayla, again.access_token)).toBe(true);
+  expect((await connectedApps(zayla, session)).connections).toHaveLength(1);
+});
+
+test("removing a Connection the user doesn't have, or no longer has, is not found", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  const tokens = await connectAgentTokens(zayla, clientId);
+  const session = await signIn(zayla, PASSWORD);
+  const [connection] = (await connectedApps(zayla, session)).connections;
+
+  expect((await removeConnection(zayla, session, "no-such-id")).status).toBe(
+    404,
+  );
+  const signedOut = await fetch(
+    `${zayla.url}/api/connections/${connection?.id}`,
+    { method: "DELETE" },
+  );
+  expect(signedOut.status).toBe(401);
+  expect(await mcpAnswers(zayla, tokens.access_token)).toBe(true);
+
+  expect(
+    (await removeConnection(zayla, session, connection?.id ?? "")).status,
+  ).toBe(204);
+  expect(
+    (await removeConnection(zayla, session, connection?.id ?? "")).status,
+  ).toBe(404);
+});
+
+test("auth-reset leaves no Connection behind", async () => {
+  const { zayla: before, clientId } = await startWithAgent();
+  const tokens = await connectAgentTokens(before, clientId);
+  await before.stop();
+
+  const reset = Bun.spawn(
+    [
+      "bun",
+      "--no-env-file",
+      join(import.meta.dir, "..", "src", "cli.ts"),
+      "auth-reset",
+    ],
+    {
+      env: { PATH: process.env.PATH, LIBRARY_DIR: library },
+      stdin: new TextEncoder().encode("yes\n"),
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
+  expect(await reset.exited).toBe(0);
+
+  const users = new Bun.Glob("users/*.yaml").scanSync(library);
+  for (const file of users)
+    expect(await Bun.file(join(library, file)).text()).not.toContain(
+      "connections",
+    );
+  zayla = await startZayla(library, { zaylaUrl: ZAYLA_URL });
+  expect((await refresh(zayla, clientId, tokens.refresh_token)).status).toBe(
+    400,
+  );
+});

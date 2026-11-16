@@ -227,8 +227,9 @@
 </dialog>
 
 <!-- Settings: the Provider that reads the user's Documents, chosen here
-     rather than in the environment, the languages they read them in, and the
-     ways the user signs in — one tab each. -->
+     rather than in the environment, the languages they read them in, the
+     ways the user signs in, and the agents they let read as them — one tab
+     each. -->
 <dialog class="same-as settings" id="settings" aria-labelledby="settings-title">
   <div class="settings-head">
     <h2 id="settings-title">Settings</h2>
@@ -238,6 +239,7 @@
     <button type="button" role="tab" id="settings-tab-provider" aria-controls="settings-provider" aria-selected="true">Provider</button>
     <button type="button" role="tab" id="settings-tab-languages" aria-controls="settings-languages" aria-selected="false" tabindex="-1">Languages</button>
     <button type="button" role="tab" id="settings-tab-signin" aria-controls="settings-signin" aria-selected="false" tabindex="-1">Sign-in</button>
+    <button type="button" role="tab" id="settings-tab-apps" aria-controls="settings-apps" aria-selected="false" tabindex="-1">Connected apps</button>
   </div>
   <div role="tabpanel" id="settings-provider" aria-labelledby="settings-tab-provider">
   <form id="settings-form">
@@ -306,6 +308,19 @@
     <div class="same-as-row" id="passkey-row">
       <button type="submit" id="passkey-add">Add a passkey</button>
     </div>
+  </form>
+  </div>
+  <div role="tabpanel" id="settings-apps" aria-labelledby="settings-tab-apps" hidden>
+  <form id="apps-form">
+    <p id="apps-intro"></p>
+    <div class="prov-row" id="apps-address-row">
+      <input id="apps-address" type="text" readonly spellcheck="false" aria-label="Address to connect an app">
+      <button type="button" id="apps-copy" class="prov-aside">Copy</button>
+    </div>
+    <h3 id="apps-heading">Connected</h3>
+    <ul class="lang-list" id="apps-list" aria-labelledby="apps-heading"></ul>
+    <p id="apps-none">No apps are connected.</p>
+    <div class="same-as-status" id="apps-status" role="status"></div>
   </form>
   </div>
 </dialog>

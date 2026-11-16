@@ -335,6 +335,36 @@
 .lang-add[hidden] {
   display: none;
 }
+/* A connected app: its name and where it was sent back to, when it was
+   approved and last used, and the button that removes it. */
+.app-about {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 0;
+}
+.app-name {
+  overflow-wrap: anywhere;
+}
+.app-meta {
+  font-size: 12px;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.prov-aside.app-remove {
+  margin-left: auto;
+  color: var(--danger);
+}
+#apps-address {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+#apps-address-row[hidden],
+#apps-heading[hidden],
+#apps-none[hidden] {
+  display: none;
+}
 .prov-row {
   display: flex;
   gap: 8px;

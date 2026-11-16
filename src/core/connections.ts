@@ -87,3 +87,43 @@ export function refreshTokenConnection(
         return { userId: user.id, connectionId: c.id };
   return null;
 }
+
+/** A Connection as its user is shown it: nothing that would let anyone use it. */
+export type ConnectionSummary = {
+  id: string;
+  name: string;
+  redirectDomain: string;
+  grantedAt: string;
+  lastUsedAt: string | null;
+};
+
+/** The Connections `userId` has made, oldest first. */
+export function listConnections(
+  lib: Library,
+  userId: string,
+): ConnectionSummary[] {
+  return requireUser(lib, userId).connections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    redirectDomain: c.redirectDomain,
+    grantedAt: c.grantedAt,
+    lastUsedAt: c.lastUsedAt,
+  }));
+}
+
+/**
+ * Remove one of `userId`'s Connections. Its agent is cut off at once: its
+ * access tokens and refresh token are good only while the Connection is in
+ * its user's file. Returns whether there was one to remove.
+ */
+export function removeConnection(
+  lib: Library,
+  userId: string,
+  connectionId: string,
+): boolean {
+  const user = requireUser(lib, userId);
+  const kept = user.connections.filter((c) => c.id !== connectionId);
+  if (kept.length === user.connections.length) return false;
+  updateUser(lib, { ...user, connections: kept });
+  return true;
+}

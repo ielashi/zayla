@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import index from "../index.html";
 import { authRoutes } from "./api/auth.ts";
+import { connectionRoutes } from "./api/connections.ts";
 import { mcpRoutes } from "./api/mcp.ts";
 import { newGrants, oauthRoutes } from "./api/oauth.ts";
 import {
@@ -907,6 +908,9 @@ export function startServer(port: number, lib: Library) {
       // the MCP endpoint they read the Library at.
       ...oauthRoutes(lib, grants),
       ...mcpRoutes(lib, grants),
+
+      // The Connections the signed-in user made, for Settings to list and remove.
+      ...connectionRoutes(lib),
     },
 
     // Every address the application answers on is registered above, so anything
