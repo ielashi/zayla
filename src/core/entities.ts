@@ -398,20 +398,23 @@ function entityIn(naming: Naming, id: number): EntityRecord {
 const entity = (lib: Library, id: number): EntityRecord =>
   entityIn(lib.naming, id);
 
+/** What one entity was seen doing across some Documents' Appearances. */
+type Seen = {
+  documents: Set<string>;
+  roles: Set<AppearanceRole>;
+  orgs: Set<number>;
+};
+
 /**
- * Every Person and Organization that appears in at least one Document, most
- * documents first and alphabetically among equals. A merged name is not listed
- * in its own right; it is listed as one of the names the surviving entity
- * answers to. An entity whose Documents have all been Deleted keeps its name
- * variants and its Merges but is not listed — there is nothing left to browse.
+ * What each entity was seen doing in these Documents' Appearances, under the
+ * name that answers for it now, as `answers` has it.
  */
-export function listEntities(lib: Library): EntityListing[] {
-  const answers = answersFor(lib.naming);
-  const groups = new Map<
-    number,
-    { documents: Set<string>; roles: Set<AppearanceRole>; orgs: Set<number> }
-  >();
-  for (const [hash, appearances] of lib.appearances)
+function groupBySurvivor(
+  answers: Map<number, number>,
+  appearancesByHash: Iterable<[string, Appearance[]]>,
+): Map<number, Seen> {
+  const groups = new Map<number, Seen>();
+  for (const [hash, appearances] of appearancesByHash)
     for (const a of appearances) {
       const survivor = answers.get(a.entityId);
       if (survivor === undefined) continue;
@@ -429,6 +432,25 @@ export function listEntities(lib: Library): EntityListing[] {
         if (org !== undefined) group.orgs.add(org);
       }
     }
+  return groups;
+}
+
+/** These Organizations, named, alphabetically. */
+const affiliationsOf = (lib: Library, orgs: Set<number>): Affiliation[] =>
+  [...orgs]
+    .map((org) => ({ id: org, displayName: entity(lib, org).displayName }))
+    .sort((a, b) => byNameNoCase(a.displayName, b.displayName));
+
+/**
+ * Every Person and Organization that appears in at least one Document, most
+ * documents first and alphabetically among equals. A merged name is not listed
+ * in its own right; it is listed as one of the names the surviving entity
+ * answers to. An entity whose Documents have all been Deleted keeps its name
+ * variants and its Merges but is not listed — there is nothing left to browse.
+ */
+export function listEntities(lib: Library): EntityListing[] {
+  const answers = answersFor(lib.naming);
+  const groups = groupBySurvivor(answers, lib.appearances);
 
   const mergedNames = new Map<number, NamedEntity[]>();
   for (const [id, survivor] of answers) {
@@ -450,12 +472,7 @@ export function listEntities(lib: Library): EntityListing[] {
         displayName: e.displayName,
         documents: group.documents.size,
         roles: ROLE_ORDER.filter((role) => group.roles.has(role)),
-        affiliations: [...group.orgs]
-          .map((org) => ({
-            id: org,
-            displayName: entity(lib, org).displayName,
-          }))
-          .sort((a, b) => byNameNoCase(a.displayName, b.displayName)),
+        affiliations: affiliationsOf(lib, group.orgs),
         mergedNames: mergedNames.get(id) ?? [],
       };
     })
@@ -481,34 +498,15 @@ export type Involvement = {
  * now: a Person merged into another is that other here, as in the listing.
  */
 export function involvedIn(lib: Library, hash: string): Involvement[] {
-  const answers = answersFor(lib.naming);
-  const groups = new Map<
-    number,
-    { roles: Set<AppearanceRole>; orgs: Set<number> }
-  >();
-  for (const a of lib.appearances.get(hash) ?? []) {
-    const survivor = answers.get(a.entityId);
-    if (survivor === undefined) continue;
-    let group = groups.get(survivor);
-    if (!group) {
-      group = { roles: new Set(), orgs: new Set() };
-      groups.set(survivor, group);
-    }
-    group.roles.add(a.role);
-    if (a.affiliationId !== null) {
-      const org = answers.get(a.affiliationId);
-      if (org !== undefined) group.orgs.add(org);
-    }
-  }
+  const groups = groupBySurvivor(answersFor(lib.naming), [
+    [hash, lib.appearances.get(hash) ?? []],
+  ]);
   return [...groups].map(([id, group]) => ({
     id,
     kind: entity(lib, id).kind,
     displayName: entity(lib, id).displayName,
     roles: ROLE_ORDER.filter((role) => group.roles.has(role)),
-    affiliations: [...group.orgs].map((org) => ({
-      id: org,
-      displayName: entity(lib, org).displayName,
-    })),
+    affiliations: affiliationsOf(lib, group.orgs),
   }));
 }
 

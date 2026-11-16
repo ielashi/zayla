@@ -110,6 +110,7 @@ test("get_document gives a Document's Enrichment, in its user's Reading language
     },
     languages: ["DE"],
     date: "2024-03-01",
+    readDate: "2024-03-01",
     dateSetByOwner: false,
     sender: { organization: "Hausverwaltung Müller", person: "Hans Müller" },
     receiver: { organization: null, person: "Jane Doe" },
@@ -363,4 +364,25 @@ test("an agent is given only tools that read, none that change the Library", asy
     "search",
   ]);
   for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);
+});
+
+test("a prefix more than one Document's hash begins with names neither", async () => {
+  const sha = (s: string) =>
+    new Bun.CryptoHasher("sha256").update(s).digest("hex");
+  // Two contents whose hashes begin alike, as one in sixteen pairs do.
+  const first = "letter 0";
+  let second = "";
+  for (let i = 1; !second; i++)
+    if (sha(`letter ${i}`)[0] === sha(first)[0]) second = `letter ${i}`;
+  const agent = await agentOver(async (library) => {
+    for (const content of [first, second])
+      await writeDocument(library, { filename: "a.pdf", content });
+  });
+
+  const ambiguous = await agent.callTool({
+    name: "get_document",
+    arguments: { hash: sha(first)[0] ?? "" },
+  });
+  expect(ambiguous.isError).toBe(true);
+  expect(textOf(ambiguous)).toContain("is the start of 2 documents' hashes");
 });

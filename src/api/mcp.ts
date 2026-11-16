@@ -15,11 +15,13 @@ import {
   type DocumentRecord,
   documentDate,
   findDocumentsByPrefix,
+  isWaitingToBeRead,
   type Library,
   listDocuments,
+  newestDated,
 } from "../core/db.ts";
 import { involvedIn } from "../core/entities.ts";
-import { objectPath } from "../core/library.ts";
+import { objectPath, transcriptionPath } from "../core/library.ts";
 import { readingLanguagesOf, shownText } from "../core/reading-languages.ts";
 import { searchLibrary } from "../core/search.ts";
 import { readTranscription } from "../core/transcription.ts";
@@ -105,10 +107,6 @@ function documentAt(
   };
 }
 
-/** Whether a Document is still waiting to be read, so has no Enrichment yet. */
-const isUnread = (doc: DocumentRecord) =>
-  doc.status === "imported" || doc.status === "needs_ocr";
-
 /**
  * Whether a Transcription is known to be complete: false when the reading ran
  * out of room, null when that was never recorded.
@@ -118,19 +116,20 @@ const isComplete = (doc: DocumentRecord) => {
   return truncated == null ? null : !truncated;
 };
 
-/** A Document's whole Enrichment, as `get_document` gives it to `languages`' reader. */
-async function enrichmentOut(
+/** A Document with its whole Enrichment, as `get_document` gives it to `languages`' reader. */
+async function documentOut(
   lib: Library,
   doc: DocumentRecord,
   languages: readonly string[],
 ) {
   const shown = shownText(doc, languages);
   const model = doc.enrichModel ?? doc.enrichProvider;
+  const exists = await Bun.file(transcriptionPath(lib.root, doc.hash)).exists();
   return {
     hash: doc.hash,
     filename: doc.filename,
     mediaType: doc.mime,
-    unread: isUnread(doc),
+    unread: isWaitingToBeRead(doc),
     title: shown?.title ?? null,
     summary: shown?.summary || null,
     texts: Object.fromEntries(
@@ -143,6 +142,7 @@ async function enrichmentOut(
     ),
     languages: doc.languages ?? [],
     date: documentDate(doc),
+    readDate: doc.docDate,
     dateSetByOwner: doc.owner !== null,
     sender: partyOut(doc.sender),
     receiver: partyOut(doc.receiver),
@@ -158,10 +158,7 @@ async function enrichmentOut(
       model || doc.enrichBaseUrl || doc.enrichedAt
         ? { model, address: doc.enrichBaseUrl, at: doc.enrichedAt }
         : null,
-    transcription: {
-      exists: (await readTranscription(lib.root, doc.hash)) !== null,
-      complete: isComplete(doc),
-    },
+    transcription: { exists, complete: exists ? isComplete(doc) : null },
   };
 }
 
@@ -210,11 +207,7 @@ function documentsWithin(
         (to === undefined || date <= to)
       );
     })
-    .sort((a, b) => {
-      const [x, y] = [documentDate(a), documentDate(b)];
-      if (!x || !y) return x ? -1 : y ? 1 : 0;
-      return y.localeCompare(x);
-    });
+    .sort(newestDated);
 }
 
 /** A day an agent names, checked as Zayla keeps dates. */
@@ -268,7 +261,7 @@ function libraryServer(
       const found = documentAt(lib, hash);
       if ("refused" in found) return found.refused;
       return json(
-        await enrichmentOut(lib, found.doc, readingLanguagesOf(lib, userId)),
+        await documentOut(lib, found.doc, readingLanguagesOf(lib, userId)),
       );
     },
   );
@@ -332,7 +325,7 @@ function libraryServer(
         date: documentDate(doc),
         sender: partyOut(doc.sender),
         receiver: partyOut(doc.receiver),
-        unread: isUnread(doc),
+        unread: isWaitingToBeRead(doc),
       }));
       return json({ documents });
     },
