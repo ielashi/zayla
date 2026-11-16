@@ -12,6 +12,7 @@ import {
   signIn,
   startZayla,
   writeDocument,
+  writeNaming,
   writeUser,
 } from "./library.ts";
 
@@ -155,11 +156,15 @@ function authorizePath(
  * A server with a user who signs in with PASSWORD, over a Library `seed`
  * writes whatever else into, and an agent registered with it.
  */
-async function startWithAgent(seed?: (library: string) => Promise<void>) {
+async function startWithAgent(
+  seed?: (library: string) => Promise<unknown>,
+  owner: { me?: number } = {},
+) {
   library = await newLibrary();
   const userId = await writeUser(library, {
     username: "owner",
     password: PASSWORD,
+    ...owner,
   });
   await seed?.(library);
   zayla = await startZayla(library, { zaylaUrl: ZAYLA_URL });
@@ -778,4 +783,215 @@ test("auth-reset leaves no Connection behind", async () => {
   expect((await refresh(zayla, clientId, tokens.refresh_token)).status).toBe(
     400,
   );
+});
+
+/**
+ * A Library of four Documents: two from the tax office to Jane Doe, one
+ * signed by her and one only naming her. She has been written two ways.
+ */
+async function seedPeopleAndOrganizations(library: string) {
+  await writeNaming(library, {
+    people: [
+      { id: 1, name: "Jane Doe", variants: ["Jane Doe", "J. Doe"] },
+      { id: 2, name: "Hans Müller" },
+    ],
+    organizations: [{ id: 3, name: "Finanzamt Berlin" }],
+  });
+  const assessment = await writeDocument(library, {
+    filename: "assessment.pdf",
+    content: "a tax assessment",
+    title: "Tax assessment 2023",
+    date: "2024-05-02",
+    sender: { organization: "Finanzamt Berlin", person: "Hans Müller" },
+    receiver: { person: "Jane Doe" },
+  });
+  const reminder = await writeDocument(library, {
+    filename: "reminder.pdf",
+    content: "a tax reminder",
+    title: "Payment reminder",
+    date: "2024-06-10",
+    sender: { organization: "Finanzamt Berlin" },
+    receiver: { person: "Jane Doe" },
+  });
+  const letter = await writeDocument(library, {
+    filename: "letter.pdf",
+    content: "a letter Jane wrote",
+    title: "Letter to the landlord",
+    date: "2024-01-15",
+    sender: { person: "Jane Doe" },
+  });
+  const invitation = await writeDocument(library, {
+    filename: "invitation.pdf",
+    content: "an invitation naming Jane",
+    title: "Party invitation",
+    people: ["Jane Doe"],
+  });
+  return { assessment, reminder, letter, invitation };
+}
+
+test("list_entities lists the Persons and Organizations with their number of Documents", async () => {
+  const { zayla, clientId } = await startWithAgent(seedPeopleAndOrganizations);
+  const agent = await mcpClient(zayla, await connectAgent(zayla, clientId));
+
+  expect(
+    resultOf(await agent.callTool({ name: "list_entities", arguments: {} })),
+  ).toEqual({
+    entities: [
+      { id: 1, kind: "person", name: "Jane Doe", documents: 4, me: false },
+      {
+        id: 3,
+        kind: "organization",
+        name: "Finanzamt Berlin",
+        documents: 2,
+        me: false,
+      },
+      { id: 2, kind: "person", name: "Hans Müller", documents: 1, me: false },
+    ],
+  });
+  await agent.close();
+});
+
+test("list_entities lists two names a Merge made one as one, counting each of their Documents once", async () => {
+  const { zayla, clientId } = await startWithAgent(async (library) => {
+    await writeNaming(library, {
+      people: [
+        { id: 1, name: "Jane Doe" },
+        { id: 2, name: "J. Doe" },
+      ],
+      merges: [{ absorbed: 2, survivor: 1 }],
+    });
+    await writeDocument(library, {
+      filename: "full.pdf",
+      content: "addressed to Jane Doe",
+      title: "Addressed in full",
+      receiver: { person: "Jane Doe" },
+    });
+    await writeDocument(library, {
+      filename: "short.pdf",
+      content: "addressed to J. Doe",
+      title: "Addressed in short",
+      receiver: { person: "J. Doe" },
+    });
+    await writeDocument(library, {
+      filename: "both.pdf",
+      content: "from Jane Doe, naming J. Doe",
+      title: "Both spellings",
+      sender: { person: "Jane Doe" },
+      people: ["J. Doe"],
+    });
+  });
+  const agent = await mcpClient(zayla, await connectAgent(zayla, clientId));
+
+  expect(
+    resultOf(await agent.callTool({ name: "list_entities", arguments: {} })),
+  ).toEqual({
+    entities: [
+      { id: 1, kind: "person", name: "Jane Doe", documents: 3, me: false },
+    ],
+  });
+  // The merged-away name answers with the name that answers for it now.
+  expect(
+    resultOf(
+      await agent.callTool({ name: "get_entity", arguments: { id: 2 } }),
+    ),
+  ).toMatchObject({
+    id: 1,
+    name: "Jane Doe",
+    variants: ["Jane Doe", "J. Doe"],
+  });
+  await agent.close();
+});
+
+test("list_entities marks the Connection's user's Me, and not another user's", async () => {
+  const { zayla, clientId } = await startWithAgent(
+    async (library) => {
+      await seedPeopleAndOrganizations(library);
+      await writeUser(library, {
+        username: "housemate",
+        password: "another password",
+        me: 2,
+      });
+    },
+    { me: 1 },
+  );
+  const agent = await mcpClient(zayla, await connectAgent(zayla, clientId));
+
+  const { entities } = resultOf(
+    await agent.callTool({ name: "list_entities", arguments: {} }),
+  );
+  expect(
+    entities
+      .filter((e: { me: boolean }) => e.me)
+      .map((e: { id: number }) => e.id),
+  ).toEqual([1]);
+  await agent.close();
+});
+
+test("get_entity gives a Person's Name variants and their Documents by the part they played", async () => {
+  let seeded = {} as Awaited<ReturnType<typeof seedPeopleAndOrganizations>>;
+  const { zayla, clientId } = await startWithAgent(
+    async (library) => {
+      seeded = await seedPeopleAndOrganizations(library);
+    },
+    { me: 1 },
+  );
+  const agent = await mcpClient(zayla, await connectAgent(zayla, clientId));
+
+  expect(
+    resultOf(
+      await agent.callTool({ name: "get_entity", arguments: { id: 1 } }),
+    ),
+  ).toEqual({
+    id: 1,
+    kind: "person",
+    name: "Jane Doe",
+    me: true,
+    variants: ["Jane Doe", "J. Doe"],
+    documents: {
+      sender: [
+        {
+          hash: seeded.letter,
+          title: "Letter to the landlord",
+          date: "2024-01-15",
+        },
+      ],
+      receiver: [
+        {
+          hash: seeded.reminder,
+          title: "Payment reminder",
+          date: "2024-06-10",
+        },
+        {
+          hash: seeded.assessment,
+          title: "Tax assessment 2023",
+          date: "2024-05-02",
+        },
+      ],
+      mentioned: [
+        { hash: seeded.invitation, title: "Party invitation", date: null },
+      ],
+    },
+  });
+
+  const organization = resultOf(
+    await agent.callTool({ name: "get_entity", arguments: { id: 3 } }),
+  );
+  expect(organization).toMatchObject({
+    kind: "organization",
+    name: "Finanzamt Berlin",
+    me: false,
+    documents: {
+      sender: [{ hash: seeded.reminder }, { hash: seeded.assessment }],
+    },
+  });
+
+  const nobody = await agent.callTool({
+    name: "get_entity",
+    arguments: { id: 99 },
+  });
+  expect(nobody.isError).toBe(true);
+  expect(resultOf(nobody)).toEqual({
+    error: "no person or organization with id 99",
+  });
+  await agent.close();
 });

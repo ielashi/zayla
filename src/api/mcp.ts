@@ -20,7 +20,12 @@ import {
   listDocuments,
   newestDated,
 } from "../core/db.ts";
-import { involvedIn } from "../core/entities.ts";
+import {
+  entityDetail,
+  involvedIn,
+  listEntities,
+  markedAsMe,
+} from "../core/entities.ts";
 import { objectPath, transcriptionPath } from "../core/library.ts";
 import { readingLanguagesOf, shownText } from "../core/reading-languages.ts";
 import { searchLibrary } from "../core/search.ts";
@@ -64,6 +69,16 @@ const LIST_DOCUMENTS_DESCRIPTION = `List the documents of the user's Zayla libra
 Given "from" and/or "to" (yyyy-mm-dd, both ends included), only documents dated within that range are listed, so documents with no known date are left out. To find documents about something, use search instead.
 
 Each entry has the document's hash, its title in the user's reading languages, its date, sender and receiver, and "unread": true for a document still waiting to be read by a model, whose title and other fields are therefore empty.`;
+
+/** What the list_entities tool tells an agent. */
+const LIST_ENTITIES_DESCRIPTION = `List every person and organization the user's Zayla library of personal documents involves, most documents first.
+
+Each has an id to pass to get_entity, whether it is a person or an organization, the name it is shown under, and how many documents it appears in. Names the user has said are the same are one entry, under one name. The person the user has marked as themselves has "me": true.`;
+
+/** What the get_entity tool tells an agent. */
+const GET_ENTITY_DESCRIPTION = `Everything the user's Zayla library knows about one person or organization, by the id list_entities gave it.
+
+It has the name it is shown under, every spelling of it the documents used, whether it is the person the user has marked as themselves ("me"), and its documents grouped by the part it played in them: "sender", "receiver" or "mentioned". A document is under one part only: "sender" if it played that, else "receiver", else "mentioned". Each document has its hash, its title in the user's reading languages (null for a document not yet read) and its date, newest first.`;
 
 /** A Sender or Receiver as an agent is given one: a part left blank is null. */
 const partyOut = (p: Party | null) =>
@@ -210,6 +225,23 @@ function documentsWithin(
     .sort(newestDated);
 }
 
+/** A Document in brief, as an agent is given one in a list: its hash, title and date. */
+type DocumentBrief = {
+  hash: string;
+  title: string | null;
+  date: string | null;
+};
+
+/** A Document in brief as `languages` show it, its title null until it is read. */
+const documentBrief = (
+  doc: DocumentRecord,
+  languages: readonly string[],
+): DocumentBrief => ({
+  hash: doc.hash,
+  title: shownText(doc, languages)?.title ?? null,
+  date: documentDate(doc),
+});
+
 /** A day an agent names, checked as Zayla keeps dates. */
 const DAY = z
   .string()
@@ -237,9 +269,7 @@ function libraryServer(
         if (!doc) return [];
         return [
           {
-            hash: hit.hash,
-            title: shownText(doc, languages)?.title ?? null,
-            date: documentDate(doc),
+            ...documentBrief(doc, languages),
             sender: partyOut(doc.sender),
             receiver: partyOut(doc.receiver),
             snippet: hit.snippet?.text ?? null,
@@ -330,7 +360,88 @@ function libraryServer(
       return json({ documents });
     },
   );
+  server.registerTool(
+    "list_entities",
+    {
+      title: "List people and organizations",
+      description: LIST_ENTITIES_DESCRIPTION,
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    () => {
+      const me = markedAsMe(lib, userId);
+      const entities = listEntities(lib).map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        name: e.displayName,
+        documents: e.documents,
+        me: e.id === me,
+      }));
+      return {
+        content: [{ type: "text", text: JSON.stringify({ entities }) }],
+      };
+    },
+  );
+  server.registerTool(
+    "get_entity",
+    {
+      title: "Get a person or organization",
+      description: GET_ENTITY_DESCRIPTION,
+      inputSchema: {
+        id: z.number().int().describe("The id list_entities gave it"),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    ({ id }) => {
+      const found = entityDetail(lib, id);
+      const me = markedAsMe(lib, userId);
+      if (!found)
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                error: `no person or organization with id ${id}`,
+              }),
+            },
+          ],
+        };
+      const languages = readingLanguagesOf(lib, userId);
+      const documents = Object.fromEntries(
+        found.documentsByRole.map(({ role, hashes }) => [
+          role,
+          hashes
+            .flatMap((hash) => {
+              const doc = lib.documents.get(hash);
+              return doc ? [documentBrief(doc, languages)] : [];
+            })
+            .sort(newestFirst),
+        ]),
+      );
+      const entity = {
+        id: found.id,
+        kind: found.kind,
+        name: found.displayName,
+        me: found.id === me,
+        variants: found.variants,
+        documents,
+      };
+      return {
+        content: [{ type: "text", text: JSON.stringify(entity) }],
+      };
+    },
+  );
   return server;
+}
+
+/** Newest first, then the undated, each in hash order among equals. */
+function newestFirst(a: DocumentBrief, b: DocumentBrief): number {
+  if (a.date !== b.date) {
+    if (a.date === null) return 1;
+    if (b.date === null) return -1;
+    return a.date < b.date ? 1 : -1;
+  }
+  return a.hash < b.hash ? -1 : a.hash > b.hash ? 1 : 0;
 }
 
 /** The bearer token a request carries, or null. */
