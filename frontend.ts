@@ -2371,7 +2371,7 @@ passkeyForm.addEventListener("submit", async (e) => {
 // ZAYLA_URL, and has none to give without it.
 
 /** A Connection as /api/connections lists it. */
-type ConnectedApp = {
+type ConnectionSummary = {
   id: string;
   name: string;
   redirectDomain: string;
@@ -2393,7 +2393,7 @@ function setAppsStatus(msg: string, isErr = false) {
   appsStatus.classList.toggle("err", isErr);
 }
 
-function showApps(address: string | null, apps: ConnectedApp[]) {
+function showApps(address: string | null, apps: ConnectionSummary[]) {
   appsIntro.textContent = address
     ? "Let an AI app such as Claude search your documents. Add Zayla to it as a connector at this address:"
     : "Connected apps need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://zayla.example.com) and restart it.";
@@ -2419,7 +2419,7 @@ async function fillApps() {
     if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
     const { address, connections } = (await res.json()) as {
       address: string | null;
-      connections: ConnectedApp[];
+      connections: ConnectionSummary[];
     };
     showApps(address, connections);
   } catch (err) {

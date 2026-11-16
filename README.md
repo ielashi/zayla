@@ -119,7 +119,8 @@ removing one cuts it off at once.
 
 claude.ai and the Claude apps connect from Anthropic's cloud, not from your
 device, so Zayla must be reachable from the internet over HTTPS for them.
-Agents on the same network as Zayla, such as Claude Code, need neither.
+Agents that run on the same network as Zayla, such as Claude Code, don't need
+it to be reachable from the internet.
 
 ## License
 

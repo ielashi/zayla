@@ -15,14 +15,34 @@ import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { stringify } from "yaml";
 
-/** How to start a server for the Library at `LIBRARY_DIR`, on the port given last. */
-const SERVER_COMMAND = [
+/** How to run a command over the Library at `LIBRARY_DIR`. */
+const ZAYLA_COMMAND = [
   "bun",
   // The tests name everything the server reads; a developer's .env mustn't.
   "--no-env-file",
   join(import.meta.dir, "..", "src", "cli.ts"),
-  "serve",
 ];
+
+/** How to start a server for the Library at `LIBRARY_DIR`, on the port given last. */
+const SERVER_COMMAND = [...ZAYLA_COMMAND, "serve"];
+
+/**
+ * Run one of the server's commands over the Library at `library`, answering
+ * its prompts with `input`. Returns its exit code.
+ */
+export async function runCommand(
+  library: string,
+  args: string[],
+  input = "",
+): Promise<number> {
+  const proc = Bun.spawn([...ZAYLA_COMMAND, ...args], {
+    env: { PATH: process.env.PATH, LIBRARY_DIR: library },
+    stdin: new TextEncoder().encode(input),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return proc.exited;
+}
 
 /** A server a test started, at `url` (no trailing slash), until it is stopped. */
 export type RunningZayla = { url: string; stop: () => Promise<void> };

@@ -7,6 +7,7 @@ import { parse } from "yaml";
 import {
   newLibrary,
   type RunningZayla,
+  runCommand,
   type ServerOptions,
   signIn,
   startZayla,
@@ -762,31 +763,17 @@ test("removing a Connection the user doesn't have, or no longer has, is not foun
 });
 
 test("auth-reset leaves no Connection behind", async () => {
-  const { zayla: before, clientId } = await startWithAgent();
+  const { zayla: before, userId, clientId } = await startWithAgent();
   const tokens = await connectAgentTokens(before, clientId);
   await before.stop();
 
-  const reset = Bun.spawn(
-    [
-      "bun",
-      "--no-env-file",
-      join(import.meta.dir, "..", "src", "cli.ts"),
-      "auth-reset",
-    ],
-    {
-      env: { PATH: process.env.PATH, LIBRARY_DIR: library },
-      stdin: new TextEncoder().encode("yes\n"),
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
-  expect(await reset.exited).toBe(0);
+  expect(await runCommand(library, ["auth-reset"], "yes\n")).toBe(0);
 
-  const users = new Bun.Glob("users/*.yaml").scanSync(library);
-  for (const file of users)
-    expect(await Bun.file(join(library, file)).text()).not.toContain(
-      "connections",
-    );
+  expect(
+    await Bun.file(join(library, "users", `${userId}.yaml`)).exists(),
+  ).toBe(false);
+  // The refresh token is good with no server memory behind it, as it is after
+  // any restart, so it is refused only because its Connection is gone.
   zayla = await startZayla(library, { zaylaUrl: ZAYLA_URL });
   expect((await refresh(zayla, clientId, tokens.refresh_token)).status).toBe(
     400,
