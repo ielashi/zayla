@@ -13,6 +13,7 @@ import type { Library } from "./core/db.ts";
 import {
   closeLibrary,
   type DocumentRecord,
+  documentDate,
   findDocumentsByPrefix,
   getDocument,
   listDocuments,
@@ -564,7 +565,7 @@ function printDocument(d: DocumentRecord, languages: string[]): void {
 
   if (d.status === "enriched") {
     console.log();
-    row("date", d.docDate ?? "—");
+    row("date", documentDate(d) ?? "—");
     row("languages", list(d.languages));
     row("people", list(d.people));
     row("keywords", list(d.keywords));

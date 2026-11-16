@@ -65,6 +65,8 @@ type DocumentFile = {
   keywords: string[] | null;
   enrichment: EnrichmentFile | null;
   transcription: TranscriptionFile | null;
+  /** What the owner set by hand; its `date` is kept even when null. */
+  owner: { date: string | null } | null;
 };
 
 /** What a file that never wrote a field reads as. */
@@ -85,6 +87,7 @@ const DEFAULTS: DocumentFile = {
   keywords: null,
   enrichment: null,
   transcription: null,
+  owner: null,
 };
 
 /**
@@ -124,6 +127,7 @@ function toFile(rec: DocumentRecord): Partial<DocumentFile> {
       chars: t.chars,
       created_at: t.createdAt,
     },
+    owner: rec.owner && { date: rec.owner.date },
   });
 }
 
@@ -173,6 +177,7 @@ function fromFile(hash: string, file: DocumentFile): DocumentRecord {
     receiver: file.receiver,
     deadlines: file.deadlines,
     transcriptionProvenance,
+    owner: file.owner ? { date: file.owner.date ?? null } : null,
   };
 }
 

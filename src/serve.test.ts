@@ -855,7 +855,12 @@ test("the icons are served without a session, each as its own type", async () =>
  */
 function read(
   hash: string,
-  reading: { sender?: Party; receiver?: Party; people?: string[] },
+  reading: {
+    sender?: Party;
+    receiver?: Party;
+    people?: string[];
+    date?: string;
+  },
 ): void {
   insertDocument(library, {
     hash,
@@ -876,7 +881,7 @@ function read(
       sender: reading.sender ?? nobody,
       receiver: reading.receiver ?? nobody,
       deadlines: [],
-      date: null,
+      date: reading.date ?? null,
       languages: [],
       keywords: [],
     },
@@ -3529,6 +3534,95 @@ test.each([
     expect(res.headers.get("content-disposition")).toStartWith("inline");
     expect(res.headers.get("content-security-policy")).toBeNull();
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  } finally {
+    server.stop(true);
+  }
+});
+
+/** Set what the owner says about one Document, returning the response. */
+const patchOwner = (
+  server: ReturnType<typeof startServer>,
+  cookie: string,
+  hash: string,
+  body: unknown,
+) =>
+  fetch(`${base(server)}/api/documents/${hash}`, {
+    method: "PATCH",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+test("PATCH /api/documents/:hash sets, clears and drops the date its owner gives a Document", async () => {
+  const hash = "d".repeat(64);
+  read(hash, { date: "2026-02-15" });
+  const server = startServer(0, library);
+  try {
+    const cookie = authCookie();
+    const listed = async () =>
+      (
+        (await (
+          await fetch(`${base(server)}/api/documents`, { headers: { cookie } })
+        ).json()) as ApiDocument[]
+      ).find((d) => d.hash === hash);
+
+    const set = await patchOwner(server, cookie, hash, {
+      owner: { date: "2026-03-04" },
+    });
+    expect(set.status).toBe(200);
+    expect(await set.json()).toMatchObject({
+      date: "2026-03-04",
+      readDate: "2026-02-15",
+      dateSetByOwner: true,
+    });
+    expect(await listed()).toMatchObject({
+      date: "2026-03-04",
+      dateSetByOwner: true,
+    });
+
+    await patchOwner(server, cookie, hash, { owner: { date: null } });
+    expect(await listed()).toMatchObject({ date: null, dateSetByOwner: true });
+
+    await patchOwner(server, cookie, hash, { owner: null });
+    expect(await listed()).toMatchObject({
+      date: "2026-02-15",
+      dateSetByOwner: false,
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
+test.each([
+  ["a day that doesn't exist", { owner: { date: "2026-02-30" } }],
+  ["a month alone", { owner: { date: "2026-03" } }],
+  ["words", { owner: { date: "last Tuesday" } }],
+  ["no owner field", { date: "2026-03-04" }],
+  ["an owner with no date", { owner: {} }],
+  ["a body that isn't an object", "2026-03-04"],
+])(
+  "PATCH /api/documents/:hash refuses %s, changing nothing",
+  async (_, body) => {
+    const hash = "d".repeat(64);
+    read(hash, { date: "2026-02-15" });
+    const server = startServer(0, library);
+    try {
+      const cookie = authCookie();
+      const res = await patchOwner(server, cookie, hash, body);
+      expect(res.status).toBe(400);
+      expect(library.documents.get(hash)?.owner).toBeNull();
+    } finally {
+      server.stop(true);
+    }
+  },
+);
+
+test("PATCH /api/documents/:hash on a Document not in the Library is not found", async () => {
+  const server = startServer(0, library);
+  try {
+    const res = await patchOwner(server, authCookie(), "e".repeat(64), {
+      owner: { date: "2026-03-04" },
+    });
+    expect(res.status).toBe(404);
   } finally {
     server.stop(true);
   }

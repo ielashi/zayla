@@ -474,6 +474,66 @@ main {
   font-family: var(--mono);
   font-size: 12px;
 }
+/* The Date row: the date, whether its owner set it, and changing it in place. */
+.date-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.date-row .undated,
+.date-note {
+  color: var(--ink-faint);
+}
+.date-note {
+  font-size: 12px;
+}
+.date-row button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.date-row button:hover {
+  text-decoration: underline;
+}
+.date-row .date-save {
+  min-height: 32px;
+  padding: 0 12px;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 8px;
+}
+.date-row .date-save:hover {
+  text-decoration: none;
+  background: var(--accent-hover);
+}
+.date-input {
+  min-height: 36px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+}
+.date-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.date-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  width: 100%;
+  margin-top: 4px;
+}
 .open {
   color: var(--on-accent);
   background: var(--accent);

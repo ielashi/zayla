@@ -51,6 +51,15 @@ if deleted, so every Enrichment records which model produced it, the address
 the Document was sent to for reading, and when.
 _Avoid_: Extraction, analysis, OCR, metadata
 
+**Owner's date**:
+The date a Document's owner gave it by hand, when the date its Enrichment read
+is wrong or missing. It may be no date at all, which is different from never
+having set one. Where there is an Owner's date it is the Document's date, for
+showing and sorting alike; the Enrichment keeps the date it read, and dropping
+the Owner's date goes back to that. No reading replaces an Owner's date.
+The interface says the date was "set by you".
+_Avoid_: Override, correction, manual date
+
 **Provider**:
 The model, at an address, that a user's Documents are sent to for Enrichment.
 Each user has at most one, chosen by themselves; until one is chosen, their
@@ -178,7 +187,8 @@ Deliberately replacing a Document's Enrichment with a new reading, made by the
 Provider of the user who asked and in their reading languages. The reading it
 replaces is gone, so it is confirmed first, naming the model that made it. A
 reading that fails, or that brings back no Transcription where the Document had
-one, replaces nothing. The interface calls Enriching "processing", and
+one, replaces nothing. An Owner's date is not part of the reading, so it stays,
+and the confirmation says so. The interface calls Enriching "processing", and
 Re-Enriching "processing again"; those are its words for people, not other
 concepts.
 _Avoid_: Refresh, redo, retry, reprocess

@@ -15,6 +15,8 @@ function doc(over: Partial<ApiDocument> = {}): ApiDocument {
     title: null,
     people: [],
     date: null,
+    readDate: null,
+    dateSetByOwner: false,
     languages: [],
     keywords: [],
     summary: null,
