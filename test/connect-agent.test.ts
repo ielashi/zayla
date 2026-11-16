@@ -133,14 +133,18 @@ function pkce() {
 }
 
 /** The address an agent sends its user to, to be approved. */
-function authorizePath(clientId: string, challenge: string, state = "xyz") {
+function authorizePath(
+  clientId: string,
+  challenge: string,
+  { namesRedirect = true } = {},
+) {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: clientId,
-    redirect_uri: REDIRECT_URI,
+    ...(namesRedirect ? { redirect_uri: REDIRECT_URI } : {}),
     code_challenge: challenge,
     code_challenge_method: "S256",
-    state,
+    state: "xyz",
     resource: `${ZAYLA_URL}/mcp`,
   });
   return `/oauth/authorize?${params}`;
@@ -173,10 +177,11 @@ async function answerApproval(
   clientId: string,
   challenge: string,
   decision: "allow" | "cancel",
+  options: { namesRedirect?: boolean } = {},
 ): Promise<URL> {
   const session = await signIn(zayla, PASSWORD);
   const page = await (
-    await fetch(`${zayla.url}${authorizePath(clientId, challenge)}`, {
+    await fetch(`${zayla.url}${authorizePath(clientId, challenge, options)}`, {
       headers: { Cookie: session },
     })
   ).text();
@@ -269,13 +274,14 @@ function exchange(
   clientId: string,
   code: string,
   verifier: string,
+  { namesRedirect = true } = {},
 ) {
   return fetch(`${zayla.url}/oauth/token`, {
     method: "POST",
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: REDIRECT_URI,
+      ...(namesRedirect ? { redirect_uri: REDIRECT_URI } : {}),
       client_id: clientId,
       code_verifier: verifier,
     }),
@@ -316,6 +322,19 @@ test("the code, with the right verifier, buys an access token, once", async () =
   const reused = await exchange(zayla, clientId, code, verifier);
   expect(reused.status).toBe(400);
   expect(await reused.json()).toMatchObject({ error: "invalid_grant" });
+});
+
+test("a client with one address needn't name it, at either step", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  const { verifier, challenge } = pkce();
+  const unnamed = { namesRedirect: false };
+  const code =
+    (
+      await answerApproval(zayla, clientId, challenge, "allow", unnamed)
+    ).searchParams.get("code") ?? "";
+
+  const token = await exchange(zayla, clientId, code, verifier, unnamed);
+  expect(token.status).toBe(200);
 });
 
 test("the code with the wrong verifier buys nothing", async () => {

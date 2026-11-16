@@ -40,7 +40,7 @@ export type CredentialRecord = {
 };
 
 /** A URL-safe random token of `bytes` bytes of entropy. */
-function randomToken(bytes = 32): string {
+export function randomToken(bytes = 32): string {
   const buf = new Uint8Array(bytes);
   crypto.getRandomValues(buf);
   return Buffer.from(buf).toString("base64url");
@@ -55,7 +55,8 @@ export function updateUser(lib: Library, next: UserState): void {
   lib.users.set(next.id, next);
 }
 
-function requireUser(lib: Library, userId: string): UserState {
+/** The user with this id, or a throw for an id that is nobody's. */
+export function requireUser(lib: Library, userId: string): UserState {
   const user = lib.users.get(userId);
   if (!user) throw new Error(`no user with id: ${userId}`);
   return user;

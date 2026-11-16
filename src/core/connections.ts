@@ -4,7 +4,7 @@
  * everything else about them, so removing the user — `auth-reset` included —
  * removes their Connections with them.
  */
-import { updateUser } from "./auth.ts";
+import { requireUser, updateUser } from "./auth.ts";
 import type { Library } from "./db.ts";
 import type { ConnectionRecord } from "./user-file.ts";
 
@@ -14,8 +14,7 @@ export function createConnection(
   userId: string,
   agent: { name: string; redirectDomain: string },
 ): ConnectionRecord {
-  const user = lib.users.get(userId);
-  if (!user) throw new Error(`no user with id: ${userId}`);
+  const user = requireUser(lib, userId);
   const connection: ConnectionRecord = {
     id: crypto.randomUUID(),
     name: agent.name,

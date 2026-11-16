@@ -10,7 +10,7 @@
  * choose is one an attacker can choose. Without ZAYLA_URL there is no issuer,
  * and every endpoint here says connected apps are unavailable.
  */
-import { requireAuth } from "../core/auth.ts";
+import { randomToken, requireAuth } from "../core/auth.ts";
 import { zaylaOrigin } from "../core/auth-config.ts";
 import { connectionUser, createConnection } from "../core/connections.ts";
 import type { Library } from "../core/db.ts";
@@ -48,6 +48,8 @@ type PendingApproval = {
   userId: string;
   client: Client;
   redirectUri: string;
+  /** Whether the agent named `redirectUri`, so must name it again for its token. */
+  namedRedirect: boolean;
   codeChallenge: string;
   state: string | null;
   createdAt: number;
@@ -59,6 +61,7 @@ type IssuedCode = {
   connectionId: string;
   clientId: string;
   redirectUri: string;
+  namedRedirect: boolean;
   codeChallenge: string;
   createdAt: number;
 };
@@ -86,13 +89,6 @@ function sweep<T extends { createdAt: number }>(
 ) {
   const cutoff = Date.now() - ttl;
   for (const [id, value] of held) if (value.createdAt < cutoff) held.delete(id);
-}
-
-/** A URL-safe random token of `bytes` bytes of entropy. */
-function randomToken(bytes = 32): string {
-  const buf = new Uint8Array(bytes);
-  crypto.getRandomValues(buf);
-  return Buffer.from(buf).toString("base64url");
 }
 
 /** The longest name a client is shown under; past it, the name is cut. */
@@ -172,13 +168,13 @@ async function registerClient(req: Request, grants: Grants): Promise<Response> {
 }
 
 /**
- * Where a client is shown as being sent back to: the host of a web address,
+ * Where a client is shown as being sent back to: the host and any port of a web address,
  * or the scheme and host of an app's own.
  */
 function redirectDomain(uri: string): string {
   const url = new URL(uri);
   return url.protocol === "https:" || url.protocol === "http:"
-    ? url.hostname
+    ? url.host
     : `${url.protocol}//${url.host}`;
 }
 
@@ -261,6 +257,7 @@ function authorize(
     userId: user.id,
     client,
     redirectUri,
+    namedRedirect: asked !== null,
     codeChallenge,
     state,
     createdAt: Date.now(),
@@ -319,6 +316,7 @@ async function answerApproval(
     connectionId: connection.id,
     clientId: pending.client.id,
     redirectUri: pending.redirectUri,
+    namedRedirect: pending.namedRedirect,
     codeChallenge: pending.codeChallenge,
     createdAt: Date.now(),
   });
@@ -363,7 +361,10 @@ async function issueToken(
     !issued ||
     issued.createdAt < Date.now() - CODE_TTL_MS ||
     issued.clientId !== field("client_id") ||
-    issued.redirectUri !== field("redirect_uri") ||
+    // An address named to authorize is named again here (RFC 6749 §4.1.3).
+    (issued.namedRedirect
+      ? issued.redirectUri !== field("redirect_uri")
+      : ![null, issued.redirectUri].includes(field("redirect_uri"))) ||
     !VERIFIER.test(verifier) ||
     new Bun.CryptoHasher("sha256").update(verifier).digest("base64url") !==
       issued.codeChallenge ||
