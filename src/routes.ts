@@ -115,3 +115,24 @@ export function resolveRoute(pathname: string): Route {
   }
   return { at: "not-found" };
 }
+
+/**
+ * The one page signing in may send someone on to rather than into the
+ * Library: an agent's approval, which needs them signed in first.
+ */
+export const APPROVAL_PATH = "/oauth/authorize";
+
+/** The sign-in page, for someone who is to be sent on to `next` once signed in. */
+export const signInAddress = (next: string): string =>
+  `/?${new URLSearchParams({ next })}`;
+
+/**
+ * Where to send someone who has just signed in, given the sign-in page's query
+ * string: the approval page `next` names, or null to stay in the Library.
+ * Nothing else is ever followed, so a link can't use signing in to send
+ * anyone elsewhere.
+ */
+export function returnAfterSignIn(search: string): string | null {
+  const next = new URLSearchParams(search).get("next");
+  return next?.startsWith(`${APPROVAL_PATH}?`) ? next : null;
+}

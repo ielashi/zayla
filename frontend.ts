@@ -16,6 +16,7 @@ import {
   listedUnder,
   type Route,
   resolveRoute,
+  returnAfterSignIn,
 } from "./src/routes.ts";
 import {
   type SortKey,
@@ -2435,7 +2436,10 @@ async function refreshAuth() {
     };
     hasPassword = me.user?.hasPassword ?? false;
     passkeysOffered = me.passkeysOffered;
-    if (me.authenticated) enterApp();
+    // Sent here to sign in before approving an agent: go back to approve it.
+    const back = me.authenticated && returnAfterSignIn(location.search);
+    if (back) location.replace(back);
+    else if (me.authenticated) enterApp();
     else showGate(me.needsSetup);
   } catch {
     gate.classList.add("on");

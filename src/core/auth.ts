@@ -104,6 +104,7 @@ export function createUser(
     provider: init.provider ?? null,
     passkeys: [],
     sessions: [],
+    connections: [],
   };
   updateUser(lib, user);
   return toRecord(user);

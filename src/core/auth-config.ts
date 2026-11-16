@@ -21,11 +21,11 @@ export type AuthConfig = {
 type Env = Record<string, string | undefined>;
 
 /**
- * The passkey configuration ZAYLA_URL describes, or null when it is unset.
- * Throws, naming the variable, for an address Zayla can't be served at: not
- * http(s), or more than an origin (a path, query, fragment or credentials).
+ * The origin ZAYLA_URL names, or null when it is unset. Throws, naming the
+ * variable, for an address Zayla can't be served at: not http(s), or more than
+ * an origin (a path, query, fragment or credentials).
  */
-export function authConfig(env: Env = process.env): AuthConfig | null {
+export function zaylaOrigin(env: Env = process.env): string | null {
   const raw = env.ZAYLA_URL?.trim();
   if (!raw) return null;
   const refuse = (why: string) =>
@@ -45,9 +45,19 @@ export function authConfig(env: Env = process.env): AuthConfig | null {
     throw refuse(
       "has more than an origin; Zayla is served at the root of its address",
     );
+  return url.origin;
+}
+
+/**
+ * The passkey configuration ZAYLA_URL describes, or null when it is unset.
+ * Throws as `zaylaOrigin` does.
+ */
+export function authConfig(env: Env = process.env): AuthConfig | null {
+  const origin = zaylaOrigin(env);
+  if (!origin) return null;
   return {
-    rpID: url.hostname,
-    rpOrigin: url.origin,
+    rpID: new URL(origin).hostname,
+    rpOrigin: origin,
     rpName: env.RP_NAME?.trim() || "Zayla",
   };
 }
