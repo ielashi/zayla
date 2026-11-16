@@ -2,7 +2,9 @@
  * Zayla as its own OAuth 2.1 authorization server, for agents that connect
  * over MCP (ADR 0004): the metadata that says where everything is, dynamic
  * client registration, the authorize step that ends in a Connection, and the
- * token endpoint for the authorization-code grant with PKCE (S256). Spread
+ * token endpoint for the authorization-code grant with PKCE (S256) and the
+ * refresh-token grant, which keeps a Connection going past its access tokens
+ * and past a restart. Spread
  * into the server's route table by serve.ts; `/mcp` itself is in mcp.ts.
  *
  * Everything is named from ZAYLA_URL, never from the request's Host header:
@@ -12,7 +14,12 @@
  */
 import { randomToken, requireAuth } from "../core/auth.ts";
 import { zaylaOrigin } from "../core/auth-config.ts";
-import { connectionUser, createConnection } from "../core/connections.ts";
+import {
+  connectionUser,
+  createConnection,
+  issueRefreshToken,
+  refreshTokenConnection,
+} from "../core/connections.ts";
 import type { Library } from "../core/db.ts";
 import { signInAddress } from "../routes.ts";
 import { approvalPage, cannotConnectPage } from "./approval-page.ts";
@@ -160,7 +167,7 @@ async function registerClient(req: Request, grants: Grants): Promise<Response> {
       client_name: client.name,
       redirect_uris: client.redirectUris,
       token_endpoint_auth_method: "none",
-      grant_types: ["authorization_code"],
+      grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },
@@ -308,6 +315,7 @@ async function answerApproval(
   const connection = createConnection(lib, user.id, {
     name: pending.client.name,
     redirectDomain: redirectDomain(pending.redirectUri),
+    clientId: pending.client.id,
   });
   sweep(grants.codes, CODE_TTL_MS);
   const code = randomToken();
@@ -332,7 +340,7 @@ async function answerApproval(
 const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
 
 /**
- * The token endpoint, for the authorization-code grant. A code is taken the
+ * The token endpoint. For the authorization-code grant, a code is taken the
  * moment it is presented, so it buys at most one token whatever else is wrong
  * with the request; it buys one only from the client it was issued to, for the
  * address it was sent back to, with the verifier of its challenge, while its
@@ -348,10 +356,12 @@ async function issueToken(
     const value = form?.get(name);
     return typeof value === "string" ? value : null;
   };
-  if (field("grant_type") !== "authorization_code")
+  const grant = field("grant_type");
+  if (grant === "refresh_token") return refreshTokens(lib, grants, field);
+  if (grant !== "authorization_code")
     return oauthError(
       "unsupported_grant_type",
-      "only authorization_code is supported",
+      "only authorization_code and refresh_token are supported",
     );
   const code = field("code") ?? "";
   const issued = grants.codes.get(code);
@@ -375,18 +385,54 @@ async function issueToken(
       "the code is unknown, used, expired, or not this client's",
     );
 
+  return tokensFor(lib, grants, issued.userId, issued.connectionId);
+}
+
+/**
+ * The refresh-token grant. A refresh token works once: the answer carries the
+ * one that replaces it, so a token that was stolen and used, or used by the
+ * agent after it was stolen, stops the other from working.
+ */
+function refreshTokens(
+  lib: Library,
+  grants: Grants,
+  field: (name: string) => string | null,
+): Response {
+  const held = refreshTokenConnection(
+    lib,
+    field("refresh_token") ?? "",
+    field("client_id") ?? "",
+  );
+  if (!held)
+    return oauthError(
+      "invalid_grant",
+      "the refresh token is unknown, used, not this client's, or its Connection removed",
+    );
+  return tokensFor(lib, grants, held.userId, held.connectionId);
+}
+
+/**
+ * Answer the token endpoint with a new access token for a Connection, held in
+ * memory, and a new refresh token for it, which replaces any it had.
+ */
+function tokensFor(
+  lib: Library,
+  grants: Grants,
+  userId: string,
+  connectionId: string,
+): Response {
+  const refreshToken = issueRefreshToken(lib, userId, connectionId);
+  if (!refreshToken)
+    return oauthError("invalid_grant", "the Connection has been removed");
   sweep(grants.tokens, ACCESS_TOKEN_TTL_MS);
   const token = randomToken();
-  grants.tokens.set(token, {
-    userId: issued.userId,
-    connectionId: issued.connectionId,
-    createdAt: Date.now(),
-  });
+  grants.tokens.set(token, { userId, connectionId, createdAt: Date.now() });
   return Response.json(
     {
       access_token: token,
       token_type: "Bearer",
       expires_in: Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
+      refresh_token: refreshToken,
     },
     { headers: { "Cache-Control": "no-store" } },
   );
@@ -458,7 +504,7 @@ export function oauthRoutes(lib: Library, grants: Grants) {
           token_endpoint: `${issuer}/oauth/token`,
           registration_endpoint: `${issuer}/oauth/register`,
           response_types_supported: ["code"],
-          grant_types_supported: ["authorization_code"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
           code_challenge_methods_supported: ["S256"],
           token_endpoint_auth_methods_supported: ["none"],
           authorization_response_iss_parameter_supported: true,

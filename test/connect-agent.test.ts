@@ -263,6 +263,7 @@ test("allowing creates a Connection in the user's file and sends the agent back 
       id: expect.any(String),
       name: "Example Agent",
       redirect_domain: "agent.example.org",
+      client_id: clientId,
       granted_at: expect.any(String),
     },
   ]);
@@ -484,4 +485,146 @@ test("without ZAYLA_URL, /mcp and the OAuth endpoints say connected apps are una
       error: "connected apps need ZAYLA_URL, the address Zayla is opened at",
     });
   }
+});
+
+test("the code buys a refresh token along with the access token", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  const { verifier, challenge } = pkce();
+  const code =
+    (
+      await answerApproval(zayla, clientId, challenge, "allow")
+    ).searchParams.get("code") ?? "";
+
+  const token = await exchange(zayla, clientId, code, verifier);
+  expect(await token.json()).toMatchObject({
+    access_token: expect.any(String),
+    refresh_token: expect.any(String),
+  });
+});
+
+/** The tokens the token endpoint answered with. */
+type Tokens = { access_token: string; refresh_token: string };
+
+/** Take an agent through approval and the exchange, to both its tokens. */
+async function connectAgentTokens(
+  zayla: RunningZayla,
+  clientId: string,
+): Promise<Tokens> {
+  const { verifier, challenge } = pkce();
+  const back = await answerApproval(zayla, clientId, challenge, "allow");
+  const token = await exchange(
+    zayla,
+    clientId,
+    back.searchParams.get("code") ?? "",
+    verifier,
+  );
+  expect(token.status).toBe(200);
+  return (await token.json()) as Tokens;
+}
+
+/** Trade a refresh token for new tokens, as an agent does. */
+function refresh(zayla: RunningZayla, clientId: string, refreshToken: string) {
+  return fetch(`${zayla.url}/oauth/token`, {
+    method: "POST",
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: clientId,
+    }),
+  });
+}
+
+test("a refresh token buys new tokens, once", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  const first = await connectAgentTokens(zayla, clientId);
+
+  const refreshed = await refresh(zayla, clientId, first.refresh_token);
+  expect(refreshed.status).toBe(200);
+  expect(refreshed.headers.get("Cache-Control")).toBe("no-store");
+  const second = (await refreshed.json()) as Tokens & { token_type: string };
+  expect(typeof second.access_token).toBe("string");
+  expect(typeof second.refresh_token).toBe("string");
+  expect(second.token_type).toBe("Bearer");
+  expect(second.access_token).not.toBe(first.access_token);
+  expect(second.refresh_token).not.toBe(first.refresh_token);
+
+  const reused = await refresh(zayla, clientId, first.refresh_token);
+  expect(reused.status).toBe(400);
+  expect(await reused.json()).toMatchObject({ error: "invalid_grant" });
+
+  expect((await refresh(zayla, clientId, second.refresh_token)).status).toBe(
+    200,
+  );
+});
+
+test("a refresh token buys nothing for another client", async () => {
+  const { zayla, clientId } = await startWithAgent();
+  const { refresh_token } = await connectAgentTokens(zayla, clientId);
+  const other = (await (await register(zayla.url)).json()) as {
+    client_id: string;
+  };
+
+  const refused = await refresh(zayla, other.client_id, refresh_token);
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({ error: "invalid_grant" });
+});
+
+test("a refresh token outlives a restart, and what it buys reaches /mcp", async () => {
+  const {
+    zayla: before,
+    userId,
+    clientId,
+  } = await startWithAgent(async (library) => {
+    await writeDocument(library, {
+      filename: "bill.pdf",
+      content: "an electricity bill",
+      title: "Electricity bill",
+    });
+  });
+  const first = await connectAgentTokens(before, clientId);
+  await before.stop();
+  zayla = await startZayla(library, { zaylaUrl: ZAYLA_URL });
+
+  const refreshed = await refresh(zayla, clientId, first.refresh_token);
+  expect(refreshed.status).toBe(200);
+  const second = (await refreshed.json()) as Tokens;
+  const agent = await mcpClient(zayla, second.access_token);
+  const found = resultOf(
+    await agent.callTool({ name: "search", arguments: { query: "bill" } }),
+  );
+  expect(found.results.map((r: { title: string }) => r.title)).toEqual([
+    "Electricity bill",
+  ]);
+  await agent.close();
+
+  const file = await Bun.file(join(library, "users", `${userId}.yaml`)).text();
+  for (const token of [first, second].flatMap((t) => [
+    t.access_token,
+    t.refresh_token,
+  ]))
+    expect(file).not.toContain(token);
+});
+
+test("a Connection's last use is recorded when it refreshes, and not on each call", async () => {
+  const { zayla, userId, clientId } = await startWithAgent();
+  const first = await connectAgentTokens(zayla, clientId);
+  const lastUsed = async () =>
+    ((await connectionsInFile(userId))[0] as { last_used_at?: string })
+      .last_used_at;
+  const connected = await lastUsed();
+  expect(connected).toEqual(expect.any(String));
+
+  const agent = await mcpClient(zayla, first.access_token);
+  await agent.callTool({ name: "search", arguments: { query: "bill" } });
+  await agent.close();
+  expect(await lastUsed()).toBe(connected);
+
+  await Bun.sleep(5);
+  expect((await refresh(zayla, clientId, first.refresh_token)).status).toBe(
+    200,
+  );
+  const refreshed = await lastUsed();
+  expect(Date.parse(refreshed ?? "")).toBeGreaterThan(
+    Date.parse(connected ?? ""),
+  );
 });
