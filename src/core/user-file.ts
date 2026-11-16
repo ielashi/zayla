@@ -111,7 +111,9 @@ type UserFile = {
     /** Absent from files written before refresh tokens. */
     client_id?: string;
     granted_at: string;
+    /** Absent until the agent has a refresh token. */
     refresh_token_sha256?: string | null;
+    /** Absent until the agent has a refresh token. */
     last_used_at?: string | null;
   }[];
 };

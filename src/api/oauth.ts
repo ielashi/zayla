@@ -4,8 +4,8 @@
  * client registration, the authorize step that ends in a Connection, and the
  * token endpoint for the authorization-code grant with PKCE (S256) and the
  * refresh-token grant, which keeps a Connection going past its access tokens
- * and past a restart. Spread
- * into the server's route table by serve.ts; `/mcp` itself is in mcp.ts.
+ * and past a restart. Spread into the server's route table by serve.ts;
+ * `/mcp` itself is in mcp.ts.
  *
  * Everything is named from ZAYLA_URL, never from the request's Host header:
  * behind a reverse proxy that is the local hop, and an issuer a request can
@@ -389,9 +389,8 @@ async function issueToken(
 }
 
 /**
- * The refresh-token grant. A refresh token works once: the answer carries the
- * one that replaces it, so a token that was stolen and used, or used by the
- * agent after it was stolen, stops the other from working.
+ * The refresh-token grant. A refresh token works once, and only for the
+ * client it was issued to: the answer carries the one that replaces it.
  */
 function refreshTokens(
   lib: Library,

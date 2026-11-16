@@ -55,8 +55,8 @@ export function issueRefreshToken(
   userId: string,
   connectionId: string,
 ): string | null {
-  const user = lib.users.get(userId);
-  if (!user?.connections.some((c) => c.id === connectionId)) return null;
+  if (!connectionUser(lib, userId, connectionId)) return null;
+  const user = requireUser(lib, userId);
   const token = randomToken();
   const now = new Date().toISOString();
   updateUser(lib, {
