@@ -465,6 +465,53 @@ export function listEntities(lib: Library): EntityListing[] {
     );
 }
 
+/** A Person or Organization one Document involves, and how. */
+export type Involvement = {
+  id: number;
+  kind: EntityKind;
+  displayName: string;
+  /** The parts it played in this Document, in sender/receiver/mentioned order. */
+  roles: AppearanceRole[];
+  /** For a Person, the Organizations they acted for in this Document. */
+  affiliations: Affiliation[];
+};
+
+/**
+ * Everyone one Document involves, each under the name that answers for them
+ * now: a Person merged into another is that other here, as in the listing.
+ */
+export function involvedIn(lib: Library, hash: string): Involvement[] {
+  const answers = answersFor(lib.naming);
+  const groups = new Map<
+    number,
+    { roles: Set<AppearanceRole>; orgs: Set<number> }
+  >();
+  for (const a of lib.appearances.get(hash) ?? []) {
+    const survivor = answers.get(a.entityId);
+    if (survivor === undefined) continue;
+    let group = groups.get(survivor);
+    if (!group) {
+      group = { roles: new Set(), orgs: new Set() };
+      groups.set(survivor, group);
+    }
+    group.roles.add(a.role);
+    if (a.affiliationId !== null) {
+      const org = answers.get(a.affiliationId);
+      if (org !== undefined) group.orgs.add(org);
+    }
+  }
+  return [...groups].map(([id, group]) => ({
+    id,
+    kind: entity(lib, id).kind,
+    displayName: entity(lib, id).displayName,
+    roles: ROLE_ORDER.filter((role) => group.roles.has(role)),
+    affiliations: [...group.orgs].map((org) => ({
+      id: org,
+      displayName: entity(lib, org).displayName,
+    })),
+  }));
+}
+
 /**
  * One entity with everything its own page shows, or null when the id has no
  * page: nobody's id, or a name whose Documents have all been Deleted and which

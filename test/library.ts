@@ -160,6 +160,12 @@ export type DocumentSeed = {
   /** The people its Enrichment names, which is what makes a Person appear. */
   people?: string[];
   transcription?: string;
+  /** Whether the reading of `transcription` ran out of room; unrecorded by default. */
+  transcriptionTruncated?: boolean;
+  keywords?: string[];
+  deadlines?: { label: string; date: string }[];
+  /** Which model read it, the address it was sent to, and when. */
+  readBy?: { model: string; baseUrl: string; at: string };
 };
 
 const party = (p: DocumentSeed["sender"]) =>
@@ -209,9 +215,33 @@ export async function writeDocument(
             date: doc.date ?? null,
             sender: party(doc.sender),
             receiver: party(doc.receiver),
+            ...(doc.keywords ? { keywords: doc.keywords } : {}),
+            ...(doc.deadlines ? { deadlines: doc.deadlines } : {}),
+            ...(doc.readBy
+              ? {
+                  enrichment: {
+                    model: doc.readBy.model,
+                    base_url: doc.readBy.baseUrl,
+                    enriched_at: doc.readBy.at,
+                  },
+                }
+              : {}),
           }
         : {}),
       ...(doc.people ? { people: doc.people } : {}),
+      ...(doc.transcription !== undefined &&
+      doc.transcriptionTruncated !== undefined
+        ? {
+            transcription: {
+              model: doc.readBy?.model ?? "test-model",
+              base_url: doc.readBy?.baseUrl ?? "https://models.example.net",
+              truncated: doc.transcriptionTruncated,
+              finish_reason: doc.transcriptionTruncated ? "length" : "stop",
+              chars: doc.transcription.length,
+              created_at: new Date().toISOString(),
+            },
+          }
+        : {}),
     }),
   );
   return hash;
@@ -250,7 +280,12 @@ export async function writeNaming(
 /** Write a user who signs in with `password`, under `users/<id>.yaml`. Returns their id. */
 export async function writeUser(
   library: string,
-  user: { username: string; password: string },
+  user: {
+    username: string;
+    password: string;
+    /** Uppercase codes in order of preference; the default ones when left out. */
+    readingLanguages?: string[];
+  },
 ): Promise<string> {
   const id = crypto.randomUUID();
   await Bun.write(
@@ -261,6 +296,9 @@ export async function writeUser(
       password_hash: await Bun.password.hash(user.password, {
         algorithm: "argon2id",
       }),
+      ...(user.readingLanguages
+        ? { reading_languages: user.readingLanguages }
+        : {}),
     }),
   );
   return id;
