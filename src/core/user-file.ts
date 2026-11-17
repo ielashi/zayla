@@ -33,8 +33,9 @@ export type SessionRecord = {
 
 /**
  * One Connection: an agent this user let read the Library as them, named as
- * it was when they approved it. No credential is kept here; an agent's access
- * tokens live only in the server's memory.
+ * it was when they approved it. Its refresh token is kept only as a hash, so
+ * this file never holds a usable credential; an agent's access tokens live
+ * only in the server's memory.
  */
 export type ConnectionRecord = {
   id: string;
@@ -42,7 +43,13 @@ export type ConnectionRecord = {
   name: string;
   /** Where the agent was sent back to, as the approval page showed it. */
   redirectDomain: string;
+  /** The client id the agent registered under, the only one its refresh token works for. */
+  clientId: string;
   grantedAt: string;
+  /** The SHA-256 of the one refresh token that still works, hex; null until the agent has one. */
+  refreshTokenHash: string | null;
+  /** When the agent last took a token, to the grain of a refresh. */
+  lastUsedAt: string | null;
 };
 
 /** Everything the Library keeps about one user, as auth.ts and the rest work with it. */
@@ -101,7 +108,13 @@ type UserFile = {
     id: string;
     name: string;
     redirect_domain: string;
+    /** Absent from files written before refresh tokens. */
+    client_id?: string;
     granted_at: string;
+    /** Absent until the agent has a refresh token. */
+    refresh_token_sha256?: string | null;
+    /** Absent until the agent has a refresh token. */
+    last_used_at?: string | null;
   }[];
 };
 
@@ -158,7 +171,10 @@ function toFile(user: UserState): Partial<UserFile> {
     id: c.id,
     name: c.name,
     redirect_domain: c.redirectDomain,
+    client_id: c.clientId,
     granted_at: c.grantedAt,
+    ...(c.refreshTokenHash ? { refresh_token_sha256: c.refreshTokenHash } : {}),
+    ...(c.lastUsedAt ? { last_used_at: c.lastUsedAt } : {}),
   }));
   return file;
 }
@@ -219,7 +235,10 @@ function fromFile(id: string, file: UserFile): UserState {
       id: c.id,
       name: c.name,
       redirectDomain: c.redirect_domain,
+      clientId: c.client_id ?? "",
       grantedAt: c.granted_at,
+      refreshTokenHash: c.refresh_token_sha256 ?? null,
+      lastUsedAt: c.last_used_at ?? null,
     })),
   };
 }
