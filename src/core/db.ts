@@ -85,6 +85,20 @@ export function documentDate(doc: DocumentRecord): string | null {
   return doc.owner ? doc.owner.date : doc.docDate;
 }
 
+/**
+ * "Newest first" by the Document's own date, as the gallery's Newest sorts:
+ * undated Documents last, and the latest filed first among equals.
+ */
+export function newestDated(a: DocumentRecord, b: DocumentRecord): number {
+  const [x, y] = [documentDate(a), documentDate(b)];
+  if (x !== y) {
+    if (!x) return 1;
+    if (!y) return -1;
+    return y.localeCompare(x);
+  }
+  return b.addedAt.localeCompare(a.addedAt);
+}
+
 /** A login challenge in flight, held in memory for the few minutes it lives. */
 export type PendingChallenge = { challenge: string; createdAt: number };
 
@@ -256,9 +270,12 @@ export function findDocumentsByPrefix(
  * legacy ones flagged `needs_ocr` before the pipeline went vision-only.
  */
 export function listPending(lib: Library): DocumentRecord[] {
-  return listDocuments(lib).filter(
-    (d) => d.status === "imported" || d.status === "needs_ocr",
-  );
+  return listDocuments(lib).filter(isWaitingToBeRead);
+}
+
+/** Whether a Document is still waiting to be read, so has no Enrichment yet. */
+export function isWaitingToBeRead(d: DocumentRecord): boolean {
+  return d.status === "imported" || d.status === "needs_ocr";
 }
 
 /** Where a reading came from: how the text was read, the address, and the model. */

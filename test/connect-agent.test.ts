@@ -399,7 +399,7 @@ function resultOf(called: Awaited<ReturnType<Client["callTool"]>>) {
   return JSON.parse(first.text);
 }
 
-test("a connected agent has one tool, search, which finds Documents as their user reads them", async () => {
+test("a connected agent's search finds Documents as their user reads them", async () => {
   let lease = "";
   const { zayla, clientId } = await startWithAgent(async (library) => {
     lease = await writeDocument(library, {
@@ -424,9 +424,9 @@ test("a connected agent has one tool, search, which finds Documents as their use
   const agent = await mcpClient(zayla, await connectAgent(zayla, clientId));
 
   const { tools } = await agent.listTools();
-  expect(tools.map((t) => t.name)).toEqual(["search"]);
-  expect(tools[0]?.description).toContain("synonyms");
-  expect(tools[0]?.description).toContain("translations");
+  const search = tools.find((t) => t.name === "search");
+  expect(search?.description).toContain("synonyms");
+  expect(search?.description).toContain("translations");
 
   const found = resultOf(
     await agent.callTool({
