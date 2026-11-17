@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import index from "../index.html";
 import { authRoutes } from "./api/auth.ts";
+import { mcpRoutes } from "./api/mcp.ts";
+import { newGrants, oauthRoutes } from "./api/oauth.ts";
 import {
   destinationFrom,
   modelsAt,
@@ -396,6 +398,7 @@ type PagesOf = ReturnType<typeof pageCounter>;
 export function startServer(port: number, lib: Library) {
   const setupCode = setupCodeForBoot(lib);
   const pagesOf = pageCounter(lib.root);
+  const grants = newGrants();
   return Bun.serve({
     port,
     routes: {
@@ -899,6 +902,11 @@ export function startServer(port: number, lib: Library) {
 
       // First-run Setup, open only while the Library has no user.
       ...setupRoutes(lib, setupCode),
+
+      // Zayla as the OAuth authorization server agents connect through, and
+      // the MCP endpoint they read the Library at.
+      ...oauthRoutes(lib, grants),
+      ...mcpRoutes(lib, grants),
     },
 
     // Every address the application answers on is registered above, so anything

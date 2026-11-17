@@ -6,7 +6,8 @@
  * way and is started the same way: `SERVER_COMMAND` followed by a port (0 for
  * one the system picks), with the Library's folder in `LIBRARY_DIR`, printing
  * the address it serves at as the first URL on its standard output, and
- * stopping on SIGTERM.
+ * stopping on SIGTERM. The address it is opened at, when a test names one, is
+ * in `ZAYLA_URL`.
  */
 
 import { mkdtemp } from "node:fs/promises";
@@ -31,13 +32,26 @@ export function newLibrary(): Promise<string> {
   return mkdtemp(join(tmpdir(), "zayla-library-"));
 }
 
+/** How a test sets up the server beyond its Library. */
+export type ServerOptions = {
+  /** The address the server is told it is opened at; unset by default. */
+  zaylaUrl?: string;
+};
+
 /**
  * Start the server over the Library at `library` on a port the system picks,
  * once it says where it is listening.
  */
-export async function startZayla(library: string): Promise<RunningZayla> {
+export async function startZayla(
+  library: string,
+  options: ServerOptions = {},
+): Promise<RunningZayla> {
   const proc = Bun.spawn([...SERVER_COMMAND, "0"], {
-    env: { PATH: process.env.PATH, LIBRARY_DIR: library },
+    env: {
+      PATH: process.env.PATH,
+      LIBRARY_DIR: library,
+      ...(options.zaylaUrl ? { ZAYLA_URL: options.zaylaUrl } : {}),
+    },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -112,10 +126,24 @@ export type DocumentSeed = {
   content: string | Uint8Array;
   /** Its title in English, as an Enrichment would write it. */
   title?: string;
+  /**
+   * Its titles and summaries by uppercase language code, as an Enrichment
+   * writes one for each Reading language; `title` is short for `{ EN: … }`.
+   */
+  texts?: Record<string, { title: string; summary?: string }>;
+  /** The languages it is written in, by uppercase code; English by default. */
+  languages?: string[];
+  /** The date its Enrichment read, yyyy-mm-dd. */
+  date?: string;
+  sender?: { organization?: string; person?: string };
+  receiver?: { organization?: string; person?: string };
   /** The people its Enrichment names, which is what makes a Person appear. */
   people?: string[];
   transcription?: string;
 };
+
+const party = (p: DocumentSeed["sender"]) =>
+  p ? { organization: p.organization ?? "", person: p.person ?? "" } : null;
 
 /**
  * Write a Document: its Original under `objects/`, then its `document.yaml`
@@ -138,7 +166,13 @@ export async function writeDocument(
   const about = join(library, "about", hash);
   if (doc.transcription !== undefined)
     await Bun.write(join(about, "transcription.txt"), doc.transcription);
-  const enriched = doc.title !== undefined;
+  const texts = Object.fromEntries(
+    Object.entries(
+      doc.texts ??
+        (doc.title !== undefined ? { EN: { title: doc.title } } : {}),
+    ).map(([code, t]) => [code, { title: t.title, summary: t.summary ?? "" }]),
+  );
+  const enriched = Object.keys(texts).length > 0;
   await Bun.write(
     join(about, "document.yaml"),
     stringify({
@@ -150,8 +184,11 @@ export async function writeDocument(
       added_at: new Date().toISOString(),
       ...(enriched
         ? {
-            texts: { en: { title: doc.title, summary: "" } },
-            languages: ["en"],
+            texts,
+            languages: doc.languages ?? ["EN"],
+            date: doc.date ?? null,
+            sender: party(doc.sender),
+            receiver: party(doc.receiver),
           }
         : {}),
       ...(doc.people ? { people: doc.people } : {}),

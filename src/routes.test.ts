@@ -7,6 +7,8 @@ import {
   entityId,
   entityPath,
   resolveRoute,
+  returnAfterSignIn,
+  signInAddress,
 } from "./routes.ts";
 
 test("the root path is the Document view", () => {
@@ -118,4 +120,23 @@ test("the patterns the server registers are one per kind of entity", () => {
   for (const pattern of ENTITY_PATH_PATTERNS) {
     expect(DESTINATION_PATHS).toContain(pattern.replace("/:id", ""));
   }
+});
+
+test("signing in for an agent's approval comes back to it", () => {
+  const approval = "/oauth/authorize?client_id=abc&state=x%20y";
+  const signIn = new URL(signInAddress(approval), "https://zayla.example.com");
+  expect(signIn.pathname).toBe("/");
+  expect(returnAfterSignIn(signIn.search)).toBe(approval);
+});
+
+test("signing in goes back to nothing but an approval page on this server", () => {
+  for (const next of [
+    "https://evil.example/oauth/authorize?x",
+    "//evil.example/oauth/authorize?x",
+    "/\\evil.example/oauth/authorize?x",
+    "/people/7",
+    "/oauth/authorizeX?x",
+  ])
+    expect(returnAfterSignIn(`?next=${encodeURIComponent(next)}`)).toBeNull();
+  expect(returnAfterSignIn("")).toBeNull();
 });

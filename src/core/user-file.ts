@@ -1,7 +1,8 @@
 /**
  * A user's `users/<id>.yaml`: who they are, how they sign in (a password hash
  * and their passkeys), the sessions they are signed in with, which Person is
- * Me, their Provider with its key, and their Reading languages. The file is
+ * Me, their Provider with its key, their Reading languages, and the agents
+ * they let read the Library on their behalf — their Connections. The file is
  * named by the user's id, so it doesn't repeat it.
  *
  * The password is only ever here as its argon2id hash. The Provider's key is
@@ -30,6 +31,20 @@ export type SessionRecord = {
   expiresAt: string;
 };
 
+/**
+ * One Connection: an agent this user let read the Library as them, named as
+ * it was when they approved it. No credential is kept here; an agent's access
+ * tokens live only in the server's memory.
+ */
+export type ConnectionRecord = {
+  id: string;
+  /** What the agent called itself. */
+  name: string;
+  /** Where the agent was sent back to, as the approval page showed it. */
+  redirectDomain: string;
+  grantedAt: string;
+};
+
 /** Everything the Library keeps about one user, as auth.ts and the rest work with it. */
 export type UserState = {
   id: string;
@@ -48,6 +63,7 @@ export type UserState = {
   provider: SavedProvider | null;
   passkeys: CredentialRecord[];
   sessions: SessionRecord[];
+  connections: ConnectionRecord[];
 };
 
 type PasskeyFile = {
@@ -80,6 +96,13 @@ type UserFile = {
   } | null;
   passkeys: PasskeyFile[];
   sessions: { token: string; created_at: string; expires_at: string }[];
+  /** Absent from files written before agents could connect. */
+  connections?: {
+    id: string;
+    name: string;
+    redirect_domain: string;
+    granted_at: string;
+  }[];
 };
 
 const DEFAULTS: UserFile = {
@@ -92,6 +115,7 @@ const DEFAULTS: UserFile = {
   provider: null,
   passkeys: [],
   sessions: [],
+  connections: [],
 };
 
 function toFile(user: UserState): Partial<UserFile> {
@@ -129,6 +153,12 @@ function toFile(user: UserState): Partial<UserFile> {
     token: s.token,
     created_at: s.createdAt,
     expires_at: s.expiresAt,
+  }));
+  file.connections = user.connections.map((c) => ({
+    id: c.id,
+    name: c.name,
+    redirect_domain: c.redirectDomain,
+    granted_at: c.grantedAt,
   }));
   return file;
 }
@@ -184,6 +214,12 @@ function fromFile(id: string, file: UserFile): UserState {
       token: s.token,
       createdAt: s.created_at,
       expiresAt: s.expires_at,
+    })),
+    connections: (file.connections ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      redirectDomain: c.redirect_domain,
+      grantedAt: c.granted_at,
     })),
   };
 }
