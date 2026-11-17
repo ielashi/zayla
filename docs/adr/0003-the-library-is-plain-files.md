@@ -13,7 +13,7 @@ and never backed up.
 | What the Library knows about a Document: catalog fields, Enrichment, provenance | `about/<hash>/document.yaml` |
 | Transcription | `about/<hash>/transcription.txt` |
 | Persons, Organizations, Name variants, Merges | `naming.yaml` |
-| A user: credentials, sessions, Me, Provider, Reading languages | `users/<id>.yaml` |
+| A user: credentials, sessions, Me, Provider, Reading languages, Connections | `users/<id>.yaml` |
 | Search index | `derived/search.db` (FTS5, disposable) |
 
 Before this, `library.db` was the authority for everything but the Originals

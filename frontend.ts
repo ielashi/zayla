@@ -2023,7 +2023,7 @@ const settingsTabs = [
 ];
 
 /** The parts of Settings, each named by its tab. */
-type SettingsTab = "provider" | "languages" | "signin";
+type SettingsTab = "provider" | "languages" | "signin" | "apps";
 
 function showSettingsTab(tab: HTMLButtonElement) {
   for (const t of settingsTabs) {
@@ -2039,6 +2039,7 @@ function openSettings(tab: SettingsTab = "provider") {
   fillLanguages();
   fillPassword();
   fillPasskey();
+  fillApps();
   const shown = el<HTMLButtonElement>(`settings-tab-${tab}`);
   showSettingsTab(shown);
   settings.showModal();
@@ -2361,6 +2362,103 @@ passkeyForm.addEventListener("submit", async (e) => {
     setPasskeyStatus((err as Error).message || "Something went wrong.", true);
   } finally {
     passkeyAdd.disabled = false;
+  }
+});
+
+// ---- Settings: connected apps -----------------------------------------------
+// The address an agent is given, and the agents the user let read as them,
+// each with a button that cuts it off. The server names the address from
+// ZAYLA_URL, and has none to give without it.
+
+/** A Connection as /api/connections lists it. */
+type ConnectionSummary = {
+  id: string;
+  name: string;
+  redirectDomain: string;
+  grantedAt: string;
+  lastUsedAt: string | null;
+};
+
+const appsIntro = el("apps-intro");
+const appsAddressRow = el("apps-address-row");
+const appsAddress = el<HTMLInputElement>("apps-address");
+const appsCopy = el<HTMLButtonElement>("apps-copy");
+const appsHeading = el("apps-heading");
+const appsList = el("apps-list");
+const appsNone = el("apps-none");
+const appsStatus = el("apps-status");
+
+function setAppsStatus(msg: string, isErr = false) {
+  appsStatus.textContent = msg;
+  appsStatus.classList.toggle("err", isErr);
+}
+
+function showApps(address: string | null, apps: ConnectionSummary[]) {
+  appsIntro.textContent = address
+    ? "Let an AI app such as Claude search your documents. Add Zayla to it as a connector at this address:"
+    : "Connected apps need the address Zayla is opened at. Set ZAYLA_URL on the server (for example https://zayla.example.com) and restart it.";
+  appsAddressRow.hidden = !address;
+  appsAddress.value = address ?? "";
+  appsCopy.textContent = "Copy";
+  // Without an address no app can connect, so an empty list says nothing.
+  appsHeading.hidden = !address && apps.length === 0;
+  appsNone.hidden = !address || apps.length > 0;
+  setHtml(
+    appsList,
+    html`${apps.map(
+      (a) =>
+        html`<li class="lang-row" data-id="${a.id}"><div class="app-about"><span class="app-name">${a.name}</span><span class="app-meta">${a.redirectDomain} · approved ${formatDate(a.grantedAt)} · ${a.lastUsedAt ? `last used ${formatDate(a.lastUsedAt)}` : "never used"}</span></div><button type="button" class="prov-aside app-remove" aria-label="Remove ${a.name}">Remove</button></li>`,
+    )}`,
+  );
+}
+
+async function fillApps() {
+  setAppsStatus("");
+  try {
+    const res = await fetch("/api/connections");
+    if (!res.ok) throw new Error(await errorFrom(res, `HTTP ${res.status}`));
+    const { address, connections } = (await res.json()) as {
+      address: string | null;
+      connections: ConnectionSummary[];
+    };
+    showApps(address, connections);
+  } catch (err) {
+    setAppsStatus((err as Error).message, true);
+  }
+}
+
+el("apps-form").addEventListener("submit", (e) => e.preventDefault());
+
+appsCopy.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(appsAddress.value);
+    appsCopy.textContent = "Copied";
+  } catch {
+    // Where the browser won't write to the clipboard, leave it selected to copy.
+    appsAddress.select();
+  }
+});
+
+appsList.addEventListener("click", async (e) => {
+  const button = (e.target as Element).closest<HTMLButtonElement>(
+    ".app-remove",
+  );
+  const row = button?.closest<HTMLElement>("[data-id]");
+  if (!button || !row) return;
+  const name = row.querySelector(".app-name")?.textContent ?? "The app";
+  button.disabled = true;
+  try {
+    const res = await fetch(`/api/connections/${row.dataset.id}`, {
+      method: "DELETE",
+    });
+    // Already gone is what was asked for.
+    if (!res.ok && res.status !== 404)
+      throw new Error(await errorFrom(res, `HTTP ${res.status}`));
+    await fillApps();
+    setAppsStatus(`Removed. ${name} can no longer read your documents.`);
+  } catch (err) {
+    button.disabled = false;
+    setAppsStatus((err as Error).message, true);
   }
 });
 
