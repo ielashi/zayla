@@ -250,12 +250,16 @@ export async function writeDocument(
 /** A Person or Organization: its id, the name it is shown under, and its spellings. */
 export type EntitySeed = { id: number; name: string; variants?: string[] };
 
+/** A Merge: the name with id `absorbed` answers to the one with id `survivor`. */
+export type MergeSeed = { absorbed: number; survivor: number };
+
 /** Write the Library's `naming.yaml`. */
 export async function writeNaming(
   library: string,
   naming: {
     people?: EntitySeed[];
     organizations?: EntitySeed[];
+    merges?: MergeSeed[];
   },
 ): Promise<void> {
   const entity = (e: EntitySeed) => ({
@@ -272,12 +276,15 @@ export async function writeNaming(
         Math.max(0, ...[...people, ...organizations].map((e) => e.id)) + 1,
       people,
       organizations,
-      merges: [],
+      merges: naming.merges ?? [],
     }),
   );
 }
 
-/** Write a user who signs in with `password`, under `users/<id>.yaml`. Returns their id. */
+/**
+ * Write a user who signs in with `password`, under `users/<id>.yaml`, and who
+ * has marked the Person with id `me` as Me, if given. Returns their id.
+ */
 export async function writeUser(
   library: string,
   user: {
@@ -285,6 +292,7 @@ export async function writeUser(
     password: string;
     /** Uppercase codes in order of preference; the default ones when left out. */
     readingLanguages?: string[];
+    me?: number;
   },
 ): Promise<string> {
   const id = crypto.randomUUID();
@@ -298,6 +306,9 @@ export async function writeUser(
       }),
       ...(user.readingLanguages
         ? { reading_languages: user.readingLanguages }
+        : {}),
+      ...(user.me !== undefined
+        ? { me: { person: user.me, marked_at: new Date().toISOString() } }
         : {}),
     }),
   );

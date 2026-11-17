@@ -358,9 +358,11 @@ test("an agent is given only tools that read, none that change the Library", asy
   const { tools } = await agent.listTools();
   expect(tools.map((t) => t.name).sort()).toEqual([
     "get_document",
+    "get_entity",
     "get_original",
     "get_transcription",
     "list_documents",
+    "list_entities",
     "search",
   ]);
   for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);
